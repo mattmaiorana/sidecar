@@ -1,0 +1,12 @@
+# build output (bundled by esbuild)
+main.js
+
+# dependencies
+node_modules/
+
+# macOS
+.DS_Store
+
+# logs / misc
+*.log
+npm-debug.log*
