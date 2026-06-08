@@ -1,0 +1,144 @@
+/* =========================================================================
+   Sidecar Browser styles
+   -------------------------------------------------------------------------
+   IMPORTANT: every chrome-hiding rule is scoped to `body.sidecar-popout`,
+   which we add to the popout window's <body> only (see window-manager.ts).
+   The main Obsidian window never has this class, so its layout is untouched.
+   ========================================================================= */
+
+/* ----- Minimal chrome in the popout: filename + back arrow, nothing else -- */
+
+/* The draggable tab strip at the top of the window. */
+body.sidecar-popout .workspace-tab-header-container {
+	display: none !important;
+}
+
+/* The status bar along the bottom. */
+body.sidecar-popout .status-bar {
+	display: none !important;
+}
+
+/* Popout windows don't normally carry the left ribbon, but hide it if present. */
+body.sidecar-popout .workspace-ribbon {
+	display: none !important;
+}
+
+/* In the editor (MarkdownView) state: keep the title and our back arrow, drop
+   the rest of the default view-header actions and the nav (back/forward)
+   buttons so it reads as "filename + back". */
+body.sidecar-popout .workspace-leaf-content[data-type="markdown"] .view-header .view-header-nav-buttons {
+	display: none !important;
+}
+body.sidecar-popout
+	.workspace-leaf-content[data-type="markdown"]
+	.view-header
+	.view-actions
+	> *:not(.sidecar-back-action) {
+	display: none !important;
+}
+
+/* Our project-browser view renders its own header; hide the native one for it. */
+body.sidecar-popout .sidecar-browser-view .view-header {
+	display: none !important;
+}
+
+/* ----- Project-browser view ---------------------------------------------- */
+
+.sidecar-browser-content {
+	padding: 0;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.sidecar-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex: 0 0 auto;
+}
+
+.sidecar-header-title-wrap {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.sidecar-header-title {
+	font-weight: var(--font-bold);
+	font-size: var(--font-ui-medium);
+	line-height: 1.2;
+}
+
+.sidecar-header-subtitle {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sidecar-header-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: var(--radius-s);
+	box-shadow: none;
+}
+
+.sidecar-header-btn:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.sidecar-list {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 6px 0;
+}
+
+.sidecar-list-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 12px;
+	cursor: pointer;
+	color: var(--text-normal);
+	border-radius: 0;
+}
+
+.sidecar-list-item:hover {
+	background: var(--background-modifier-hover);
+}
+
+.sidecar-list-item-icon {
+	display: inline-flex;
+	color: var(--text-muted);
+	flex: 0 0 auto;
+}
+
+.sidecar-list-item-icon svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+.sidecar-list-item-name {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sidecar-empty {
+	padding: 16px 12px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	line-height: 1.5;
+}
