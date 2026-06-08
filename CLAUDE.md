@@ -39,6 +39,14 @@ no syncing.
      class ourselves to the popout window's `<body>` (via the typed
      `WorkspaceWindow.doc`), rather than relying on Obsidian's internal popout
      class name. This *guarantees* the main window is never affected.
+   - **Drag region caveat (macOS):** Obsidian's popout is a frameless window
+     where the native tab strip (`.workspace-tab-header-container`) is the drag
+     region and reserves space for the traffic-light buttons. Because we hide
+     that strip, `styles.css` re-establishes dragging by setting
+     `-webkit-app-region: drag` on our headers plus a left inset for the traffic
+     lights (with interactive controls marked `no-drag`). This block is the most
+     environment-dependent part of the plugin — tune it if window dragging or
+     the traffic lights misbehave in a given OS/Obsidian build.
 
 5. **Bounds persistence.** Default to a tall, narrow column
    (`DEFAULT_SETTINGS.windowBounds` = 420×1000). We open at the saved bounds via

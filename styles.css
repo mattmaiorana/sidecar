@@ -8,7 +8,12 @@
 
 /* ----- Minimal chrome in the popout: filename + back arrow, nothing else -- */
 
-/* The draggable tab strip at the top of the window. */
+/* Hide the native tab strip at the top of the window.
+   NB: on macOS this strip is normally the window's drag region and reserves
+   space for the OS traffic-light buttons. We hide it here, then re-establish a
+   drag region and a left inset on our headers below so the window stays
+   movable and the traffic lights don't overlap the title. This is the single
+   most environment-dependent rule in the plugin — verify it live. */
 body.sidecar-popout .workspace-tab-header-container {
 	display: none !important;
 }
@@ -21,6 +26,22 @@ body.sidecar-popout .status-bar {
 /* Popout windows don't normally carry the left ribbon, but hide it if present. */
 body.sidecar-popout .workspace-ribbon {
 	display: none !important;
+}
+
+/* Restore window dragging now that the native drag strip is hidden: make our
+   custom browser header and the markdown view-header act as the drag region,
+   and inset them so the macOS traffic lights have clear space at top-left. */
+body.sidecar-popout .sidecar-header,
+body.sidecar-popout .workspace-leaf-content[data-type="markdown"] .view-header {
+	-webkit-app-region: drag;
+	padding-left: 76px;
+}
+/* Interactive controls inside those headers must stay clickable. */
+body.sidecar-popout .sidecar-header button,
+body.sidecar-popout .view-header .view-header-title-container,
+body.sidecar-popout .view-header .view-actions,
+body.sidecar-popout .view-header .view-actions * {
+	-webkit-app-region: no-drag;
 }
 
 /* In the editor (MarkdownView) state: keep the title and our back arrow, drop
