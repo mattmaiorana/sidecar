@@ -94,10 +94,11 @@ npm run build      # tsc -noEmit + minified production bundle
 npm run typecheck  # tsc -noEmit only — must pass clean
 ```
 
-Build output `main.js` is git-ignored. For testing, the vault's
-`.obsidian/plugins/obsidian-sidecar-browser/` is symlinked at the repo so a
-rebuild is picked up after reloading the plugin in Obsidian (Cmd+P → "Reload app
-without saving", or toggle the plugin off/on).
+Build output `main.js` is git-ignored. **Work only inside this repo** — do not
+write into any Obsidian vault from a session. The user copies the build outputs
+(`main.js`, `manifest.json`, `styles.css`) into their vault's
+`.obsidian/plugins/obsidian-sidecar-browser/` folder themselves and reloads the
+plugin in Obsidian (Cmd+P → "Reload app without saving", or toggle it off/on).
 
 ## Conventions
 

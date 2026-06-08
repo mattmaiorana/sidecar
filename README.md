@@ -25,7 +25,7 @@ park next to your web browser. No separate app, no syncing.
 This plugin isn't in the community store yet. To run it from source:
 
 1. Build it (see [Development](#development)) so `main.js` exists.
-2. Copy or symlink `main.js`, `manifest.json`, and `styles.css` into your vault at:
+2. Copy `main.js`, `manifest.json`, and `styles.css` into your vault at:
    `<your vault>/.obsidian/plugins/obsidian-sidecar-browser/`
 3. In Obsidian: **Settings → Community plugins**, make sure *Restricted mode* is
    off, then enable **Sidecar Browser**.
@@ -54,8 +54,9 @@ npm run typecheck  # type-check only
 ```
 
 The build output is `main.js` in the repo root (git-ignored). For live testing,
-point your vault's plugin folder at the build output (a symlink works well) and
-reload the plugin in Obsidian after each rebuild.
+copy `main.js`, `manifest.json`, and `styles.css` into your vault's
+`.obsidian/plugins/obsidian-sidecar-browser/` folder and reload the plugin in
+Obsidian after each rebuild.
 
 `isDesktopOnly: true` — popout windows are a desktop-only feature.
 
