@@ -6,6 +6,9 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 /** Class added to the popout window's <body> so all chrome-hiding CSS can be
  *  scoped to it — guaranteeing the main window is never affected. */
 const POPOUT_BODY_CLASS = "sidecar-popout";
+/** Bump on each iteration so we can confirm, in the popout's own inspector
+ *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
+export const SIDECAR_BUILD = "popout-fix-2";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -28,6 +31,9 @@ export class SidecarWindowManager {
 	private leaf: WorkspaceLeaf | null = null;
 	/** Debounce handle for size persistence. */
 	private saveBoundsTimer: number | null = null;
+	/** True between requesting a popout and its window-open event firing, so we
+	 *  mark exactly the window we just opened (not the user's other popouts). */
+	private pendingPopout = false;
 
 	constructor(plugin: SidecarBrowserPlugin) {
 		this.plugin = plugin;
@@ -50,6 +56,8 @@ export class SidecarWindowManager {
 		}
 
 		const bounds = this.plugin.settings.windowBounds;
+		// Mark the next-opened popout window as ours (see handleWindowOpen).
+		this.pendingPopout = true;
 		const leaf = this.app.workspace.openPopoutLeaf({
 			// Width always resets to the default on open; height and position are
 			// restored from the last session.
@@ -69,6 +77,18 @@ export class SidecarWindowManager {
 		await this.showBrowser(leaf);
 		this.attachBoundsPersistence(leaf);
 		await this.app.workspace.revealLeaf(leaf);
+		this.pendingPopout = false;
+	}
+
+	/**
+	 * Mark our popout window the instant Obsidian creates it. This event fires
+	 * with the real WorkspaceWindow, so it's the most reliable place to add the
+	 * body class — earlier and surer than deriving it from the rendered view.
+	 */
+	handleWindowOpen(win: WorkspaceWindow): void {
+		if (!this.pendingPopout) return;
+		this.pendingPopout = false;
+		this.applyPopoutMarks(win.doc);
 	}
 
 	/** Swap the leaf to the folder-listing state. Used on open and on "back". */
@@ -152,6 +172,7 @@ export class SidecarWindowManager {
 		}
 
 		const bar = createDiv({ cls: "sidecar-bar sidecar-titlebar" });
+		bar.dataset.sidecarBuild = SIDECAR_BUILD;
 		const back = bar.createDiv({
 			cls: "sidecar-bar-back",
 			attr: { role: "button", "aria-label": "Back to all notes" },
@@ -193,12 +214,18 @@ export class SidecarWindowManager {
 
 	/**
 	 * Add our marker class to the popout window's <body> so the popout-scoped
-	 * CSS applies. Idempotent and self-healing — called on every state render
-	 * because the class can otherwise be missing (the container isn't reliably a
-	 * WorkspaceWindow synchronously right after the window opens).
+	 * CSS applies. Idempotent and self-healing — called on every state render as
+	 * a backup to the window-open marking, in case the class is ever missing.
 	 */
 	private ensurePopoutClass(leaf: WorkspaceLeaf): void {
-		this.getPopoutDoc(leaf)?.body.classList.add(POPOUT_BODY_CLASS);
+		const doc = this.getPopoutDoc(leaf);
+		if (doc) this.applyPopoutMarks(doc);
+	}
+
+	/** Add the scoping class + a visible build stamp to a popout document. */
+	private applyPopoutMarks(doc: Document): void {
+		doc.body.classList.add(POPOUT_BODY_CLASS);
+		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
 	}
 
 	private attachBoundsPersistence(leaf: WorkspaceLeaf): void {

@@ -8,7 +8,7 @@ import {
 	ProjectBrowserView,
 	VIEW_TYPE_SIDECAR_BROWSER,
 } from "./project-browser-view";
-import { SidecarWindowManager } from "./window-manager";
+import { SidecarWindowManager, SIDECAR_BUILD } from "./window-manager";
 
 export default class SidecarBrowserPlugin extends Plugin {
 	settings!: SidecarBrowserSettings;
@@ -16,6 +16,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		console.info(`[Sidecar Browser] loaded — build ${SIDECAR_BUILD}`);
 
 		this.windowManager = new SidecarWindowManager(this);
 
@@ -44,6 +45,14 @@ export default class SidecarBrowserPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("window-close", (win) => {
 				this.windowManager.handleWindowClose(win);
+			})
+		);
+
+		// Mark our popout window the moment it's created — the most reliable
+		// point to add the body class the popout-scoped CSS depends on.
+		this.registerEvent(
+			this.app.workspace.on("window-open", (win) => {
+				this.windowManager.handleWindowOpen(win);
 			})
 		);
 

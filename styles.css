@@ -17,6 +17,9 @@ body.sidecar-popout {
 	   Tune this if the lights overlap the title or leave too much space. */
 	--sidecar-traffic-inset: 76px;
 	--sidecar-bar-height: 40px;
+	/* Let note content use the full narrow column instead of Obsidian's
+	   centered readable-line-width block. */
+	--file-line-width: 100%;
 }
 
 /* ----- Hide all native chrome inside the popout -------------------------- */
