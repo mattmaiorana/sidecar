@@ -66,9 +66,9 @@ export class ProjectBrowserView extends ItemView {
 	/** Rebuild the list. */
 	render(): void {
 		// Self-mark the popout so the scoped chrome CSS applies even when this
-		// view was restored by Obsidian on startup (bypassing the window
-		// manager's open/showBrowser path).
-		this.plugin.windowManager.markPopout(this.containerEl);
+		// view was restored/revealed by Obsidian (bypassing the window manager's
+		// open/showBrowser path).
+		this.plugin.windowManager.markLeafPopout(this.leaf);
 
 		const container = this.contentEl;
 		container.empty();

@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "popout-fix-3";
+export const SIDECAR_BUILD = "popout-fix-4";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -44,16 +44,15 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Open the Sidecar popout (or focus it if already open) and show the
-	 * project-browser list.
+	 * Open the Sidecar popout fresh (closing any existing one) and show the
+	 * project-browser list at the default width.
 	 */
 	async open(): Promise<void> {
-		// Already open? Just focus it.
-		if (this.leaf && this.getPopoutWindow(this.leaf)) {
-			await this.app.workspace.revealLeaf(this.leaf);
-			await this.showBrowser(this.leaf);
-			return;
-		}
+		// Always (re)create fresh. Reopening is the only reliable way to reset
+		// the column to the default width — the popout's *creation* size is
+		// honored, but resizing an existing popout at runtime is not. It also
+		// guarantees the body class is (re)applied through every marking path.
+		this.close();
 
 		const bounds = this.plugin.settings.windowBounds;
 		// Mark the next-opened popout window as ours (see handleWindowOpen).
@@ -106,10 +105,11 @@ export class SidecarWindowManager {
 		if (!restored) return;
 
 		this.leaf = restored;
-		this.markPopout(restored.view.containerEl);
+		this.markLeafPopout(restored);
 		this.attachBoundsPersistence(restored);
 
-		// Width resets on every load — including a restored window.
+		// Best-effort width reset on a restored window (runtime resize may be a
+		// no-op in the popout; reopening via the command always resets it).
 		const win = this.getPopoutWin(restored);
 		if (win) win.resizeTo(DEFAULT_WIDTH, win.outerHeight);
 	}
@@ -120,7 +120,7 @@ export class SidecarWindowManager {
 			type: VIEW_TYPE_SIDECAR_BROWSER,
 			active: true,
 		});
-		this.ensurePopoutClass(leaf);
+		this.markLeafPopout(leaf);
 	}
 
 	/**
@@ -179,7 +179,7 @@ export class SidecarWindowManager {
 	private decorateNoteHeader(leaf: WorkspaceLeaf): void {
 		// Self-heal the body class on note renders too, so the bar's CSS applies
 		// even if the list state was never shown first.
-		this.ensurePopoutClass(leaf);
+		this.markLeafPopout(leaf);
 
 		const view = leaf.view;
 		const container = view.containerEl;
@@ -219,29 +219,32 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * The popout window's document, derived from the live view's element — which
-	 * is reliable once the view has rendered, unlike `getContainer()` right
-	 * after `openPopoutLeaf()`. Returns null if the leaf is (unexpectedly) in
-	 * the main window. `document` here is the main window's document, so the
-	 * inequality check identifies a separate popout document.
+	 * The popout window's document for this leaf. Prefer the container API
+	 * (`getContainer()` → WorkspaceWindow), which is reliable whenever the
+	 * window already exists — i.e. on reveal, restore, and any render. Fall back
+	 * to the view element's ownerDocument only for the brief moment right after
+	 * openPopoutLeaf() before the container is wired up. `document` is the main
+	 * window's, so the inequality identifies a separate popout document.
 	 */
-	private getPopoutDoc(leaf: WorkspaceLeaf): Document | null {
+	private popoutDocFor(leaf: WorkspaceLeaf): Document | null {
+		const container = leaf.getContainer();
+		if (container instanceof WorkspaceWindow) return container.doc;
 		const viaView = leaf.view?.containerEl?.ownerDocument ?? null;
-		if (viaView && viaView !== document) return viaView;
-		return this.getPopoutWindow(leaf)?.doc ?? null;
+		return viaView && viaView !== document ? viaView : null;
 	}
 
 	private getPopoutWin(leaf: WorkspaceLeaf): Window | null {
-		return this.getPopoutDoc(leaf)?.defaultView ?? null;
+		return this.popoutDocFor(leaf)?.defaultView ?? null;
 	}
 
 	/**
-	 * Add our marker class to the popout window's <body> so the popout-scoped
-	 * CSS applies. Idempotent and self-healing — called on every state render as
-	 * a backup to the window-open marking, in case the class is ever missing.
+	 * Add the scoping class + build stamp to this leaf's popout window. Public
+	 * so the browser view can self-mark on render — that path covers a view
+	 * Obsidian restored on startup, which never goes through showBrowser.
+	 * Idempotent; safe to call on every render.
 	 */
-	private ensurePopoutClass(leaf: WorkspaceLeaf): void {
-		const doc = this.getPopoutDoc(leaf);
+	markLeafPopout(leaf: WorkspaceLeaf): void {
+		const doc = this.popoutDocFor(leaf);
 		if (doc) this.applyPopoutMarks(doc);
 	}
 
@@ -249,17 +252,6 @@ export class SidecarWindowManager {
 	private applyPopoutMarks(doc: Document): void {
 		doc.body.classList.add(POPOUT_BODY_CLASS);
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
-	}
-
-	/**
-	 * Mark the popout from any element living in it. Public so the browser view
-	 * can self-mark on render — that path also covers a view Obsidian restored
-	 * on startup, which never goes through showBrowser. `document` is the main
-	 * window's, so the inequality identifies a separate popout document.
-	 */
-	markPopout(el: HTMLElement): void {
-		const doc = el.ownerDocument;
-		if (doc && doc !== document) this.applyPopoutMarks(doc);
 	}
 
 	private attachBoundsPersistence(leaf: WorkspaceLeaf): void {
