@@ -1,4 +1,4 @@
-import { TFile, WorkspaceLeaf, WorkspaceWindow } from "obsidian";
+import { TFile, WorkspaceLeaf, WorkspaceWindow, setIcon } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 import { VIEW_TYPE_SIDECAR_BROWSER } from "./project-browser-view";
 import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
@@ -80,12 +80,23 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Swap the leaf to a real MarkdownView on `file`. Navigating back to the
-	 * list is handled by Obsidian's own back/forward buttons (the open is a
-	 * history entry), so we add no custom back control here.
+	 * Swap the leaf to a real MarkdownView on `file`, then inject our own
+	 * "← All" title bar (Obsidian's native header is hidden in the popout).
 	 */
 	async openFileInSidecar(leaf: WorkspaceLeaf, file: TFile): Promise<void> {
 		await leaf.openFile(file, { active: true });
+		this.decorateNoteHeader(leaf);
+	}
+
+	/**
+	 * Keep the note title bar in sync when the file in our leaf changes through
+	 * some path other than openFileInSidecar (wired to the workspace
+	 * `file-open` event). No-op while the list is showing.
+	 */
+	refreshNoteHeader(): void {
+		if (!this.leaf || !this.getPopoutWindow(this.leaf)) return;
+		if (this.leaf.view.getViewType() === VIEW_TYPE_SIDECAR_BROWSER) return;
+		this.decorateNoteHeader(this.leaf);
 	}
 
 	/** Close the popout window if it is open (used by a command / on demand). */
@@ -111,6 +122,42 @@ export class SidecarWindowManager {
 	/** Best-effort save on plugin unload. */
 	saveBoundsNow(): void {
 		if (this.leaf) this.captureBounds(this.leaf);
+	}
+
+	// --- custom note title bar --------------------------------------------
+
+	/**
+	 * Create (or update) our "← All  |  <title>" bar as the first child of the
+	 * note view's container. Idempotent: a repeated open of the same view just
+	 * refreshes the title. The bar is destroyed automatically when the leaf is
+	 * swapped back to the list (the MarkdownView's container is torn down).
+	 */
+	private decorateNoteHeader(leaf: WorkspaceLeaf): void {
+		const view = leaf.view;
+		const container = view.containerEl;
+		const title = view.getDisplayText();
+
+		const existing = container.querySelector<HTMLElement>(
+			":scope > .sidecar-titlebar"
+		);
+		if (existing) {
+			const titleEl = existing.querySelector<HTMLElement>(".sidecar-bar-title");
+			if (titleEl) titleEl.setText(title);
+			return;
+		}
+
+		const bar = createDiv({ cls: "sidecar-bar sidecar-titlebar" });
+		const back = bar.createDiv({
+			cls: "sidecar-bar-back",
+			attr: { role: "button", "aria-label": "Back to all notes" },
+		});
+		setIcon(back.createSpan({ cls: "sidecar-bar-back-icon" }), "chevron-left");
+		back.createSpan({ cls: "sidecar-bar-back-label", text: "All" });
+		back.addEventListener("click", () => void this.showBrowser(leaf));
+
+		bar.createSpan({ cls: "sidecar-bar-title", text: title });
+
+		container.prepend(bar);
 	}
 
 	// --- popout window plumbing -------------------------------------------

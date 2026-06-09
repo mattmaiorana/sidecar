@@ -47,6 +47,14 @@ export default class SidecarBrowserPlugin extends Plugin {
 			})
 		);
 
+		// Keep our custom note title bar in sync if the file in the Sidecar leaf
+		// changes outside of our own click handler.
+		this.registerEvent(
+			this.app.workspace.on("file-open", () => {
+				this.windowManager.refreshNoteHeader();
+			})
+		);
+
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
 	}
 

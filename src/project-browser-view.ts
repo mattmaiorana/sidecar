@@ -1,4 +1,11 @@
-import { ItemView, TFile, TFolder, WorkspaceLeaf, setIcon } from "obsidian";
+import {
+	ItemView,
+	TAbstractFile,
+	TFile,
+	TFolder,
+	WorkspaceLeaf,
+	setIcon,
+} from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 
 export const VIEW_TYPE_SIDECAR_BROWSER = "sidecar-browser-view";
@@ -6,10 +13,10 @@ export const VIEW_TYPE_SIDECAR_BROWSER = "sidecar-browser-view";
 /**
  * The folder-listing state of the single Sidecar leaf.
  *
- * We own this DOM entirely, so the minimal "filename + nav" chrome is rendered
- * here directly as a custom header rather than fought out of the native view
- * header. Clicking a file swaps this same leaf to a real MarkdownView via the
- * window manager (see {@link SidecarBrowserPlugin.openFileInSidecar}).
+ * We own this DOM entirely and render our own chrome with `sidecar-*` class
+ * names — Obsidian's native view header is hidden in the popout, so neither it
+ * nor other plugins' header styling applies here. Clicking a file swaps this
+ * same leaf to a real MarkdownView via the window manager.
  */
 export class ProjectBrowserView extends ItemView {
 	private plugin: SidecarBrowserPlugin;
@@ -17,8 +24,6 @@ export class ProjectBrowserView extends ItemView {
 	constructor(leaf: WorkspaceLeaf, plugin: SidecarBrowserPlugin) {
 		super(leaf);
 		this.plugin = plugin;
-		// We render our own header inside contentEl; flag the container so the
-		// popout-scoped CSS can hide the native view header for this view only.
 		this.containerEl.addClass("sidecar-browser-view");
 	}
 
@@ -35,6 +40,22 @@ export class ProjectBrowserView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
+		// Keep the list live without a manual refresh: re-render when files in
+		// the configured folder are added, removed, or renamed. (registerEvent
+		// auto-unsubscribes when the view closes.)
+		const onChange = (file: TAbstractFile) => {
+			if (this.isInProjectsFolder(file)) this.render();
+		};
+		this.registerEvent(this.app.vault.on("create", onChange));
+		this.registerEvent(this.app.vault.on("delete", onChange));
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				if (this.isInProjectsFolder(file) || this.wasInProjectsFolder(oldPath)) {
+					this.render();
+				}
+			})
+		);
+
 		this.render();
 	}
 
@@ -42,7 +63,7 @@ export class ProjectBrowserView extends ItemView {
 		this.contentEl.empty();
 	}
 
-	/** Rebuild the list — called on open and whenever the folder may have changed. */
+	/** Rebuild the list. */
 	render(): void {
 		const container = this.contentEl;
 		container.empty();
@@ -50,25 +71,16 @@ export class ProjectBrowserView extends ItemView {
 
 		const folderPath = this.plugin.settings.projectsFolder;
 
-		// --- Custom header: title only (this is the list root, nowhere to go "back" to). ---
-		const header = container.createDiv({ cls: "sidecar-header" });
-		const titleWrap = header.createDiv({ cls: "sidecar-header-title-wrap" });
-		titleWrap.createSpan({ cls: "sidecar-header-title", text: "Projects" });
-		titleWrap.createSpan({
-			cls: "sidecar-header-subtitle",
-			text: folderPath || "/",
+		// --- Our custom top bar (root view: title only, no "back"). ---
+		const bar = container.createDiv({ cls: "sidecar-bar sidecar-list-bar" });
+		bar.createSpan({
+			cls: "sidecar-bar-title",
+			text: this.folderLabel(folderPath),
+			attr: { title: folderPath || "/" },
 		});
-
-		const refreshBtn = header.createEl("button", {
-			cls: "sidecar-header-btn",
-			attr: { "aria-label": "Refresh list" },
-		});
-		setIcon(refreshBtn, "refresh-cw");
-		refreshBtn.addEventListener("click", () => this.render());
 
 		// --- File list. ---
 		const listEl = container.createDiv({ cls: "sidecar-list" });
-
 		const files = this.getProjectFiles(folderPath);
 
 		if (files === null) {
@@ -87,21 +99,25 @@ export class ProjectBrowserView extends ItemView {
 			return;
 		}
 
+		const activePath = this.app.workspace.getActiveFile()?.path;
 		for (const file of files) {
 			const item = listEl.createDiv({ cls: "sidecar-list-item" });
+			if (file.path === activePath) item.addClass("is-active");
 			const icon = item.createSpan({ cls: "sidecar-list-item-icon" });
 			setIcon(icon, "file-text");
-			item.createSpan({
-				cls: "sidecar-list-item-name",
-				text: file.basename,
-			});
+			item.createSpan({ cls: "sidecar-list-item-name", text: file.basename });
 			item.addEventListener("click", () => {
-				void this.plugin.windowManager.openFileInSidecar(
-					this.leaf,
-					file
-				);
+				void this.plugin.windowManager.openFileInSidecar(this.leaf, file);
 			});
 		}
+	}
+
+	/** A short label for the configured folder (its last segment, or the vault
+	 *  name for the root). */
+	private folderLabel(folderPath: string): string {
+		if (folderPath === "") return this.app.vault.getName();
+		const segs = folderPath.split("/");
+		return segs[segs.length - 1] || folderPath;
 	}
 
 	/**
@@ -133,5 +149,22 @@ export class ProjectBrowserView extends ItemView {
 	private folderAt(path: string): TFolder | null {
 		const af = this.app.vault.getAbstractFileByPath(path);
 		return af instanceof TFolder ? af : null;
+	}
+
+	/** True if `file` is a direct child of the configured projects folder. */
+	private isInProjectsFolder(file: TAbstractFile): boolean {
+		const parentPath = file.parent
+			? file.parent.path === "/"
+				? ""
+				: file.parent.path
+			: "";
+		return parentPath === this.plugin.settings.projectsFolder;
+	}
+
+	/** Same test, for a pre-rename path string. */
+	private wasInProjectsFolder(oldPath: string): boolean {
+		const idx = oldPath.lastIndexOf("/");
+		const parentPath = idx === -1 ? "" : oldPath.slice(0, idx);
+		return parentPath === this.plugin.settings.projectsFolder;
 	}
 }

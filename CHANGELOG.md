@@ -5,6 +5,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Design pass (post-v1)
+
+- **Fully custom chrome.** Hide Obsidian's native tab strip *and* per-view header
+  in the popout; render our own `.sidecar-bar` with `sidecar-*` class names so
+  the Sidecar is insulated from global UI plugins (e.g. Simplified Layout) and
+  our styles never leak out.
+- **`← All` title bar** injected into the note view (replaces the old custom
+  back-arrow action and Obsidian's native back/forward in the popout).
+- **Width resets to the default (425px) on every open**, with a sticky detent
+  that snaps back to 425px when resized near it. Height/position still persist.
+- **Live list** — the project list auto-refreshes on file create/delete/rename,
+  so the manual refresh button is gone.
+- **Tighter margins** — content uses the full narrow column (readable-line-width
+  disabled in the popout) for a denser, notes-panel feel.
+
 ### v1 (0.1.0) — first working version
 
 The first version ships the full MVP:

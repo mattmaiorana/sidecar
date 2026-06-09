@@ -29,16 +29,23 @@ no syncing.
      `leaf.openFile(file)` swaps the same leaf to a `MarkdownView`.
    - Back arrow → `setViewState(...)` swaps back to the list.
 
-4. **Minimal chrome, popout-scoped.** The window should read as "filename + back
-   arrow, nothing else":
-   - In `ProjectBrowserView` we own the DOM, so we render a small custom header
-     in `contentEl` and hide that view's native view-header via CSS.
-   - In the `MarkdownView` state we keep the native title, add a back-arrow via
-     the supported **`view.addAction(...)`** API, and hide the rest with CSS.
-   - **All chrome-hiding CSS is scoped to `body.sidecar-popout`.** We add that
-     class ourselves to the popout window's `<body>` (via the typed
+4. **Fully custom chrome, popout-scoped.** The window reads as "← All + title,
+   nothing else". Obsidian's native tab strip **and** per-view header are hidden
+   in the popout; we render our own `.sidecar-bar` instead, using `sidecar-*`
+   class names that other plugins (e.g. Simplified Layout) don't target — so the
+   Sidecar looks consistent regardless of global UI tweaks:
+   - In `ProjectBrowserView` we own the DOM and render the bar in `contentEl`
+     (root view: folder title only, no back control).
+   - In the `MarkdownView` state we inject the bar (`← All` + the note title) as
+     the first child of `view.containerEl` (`window-manager.decorateNoteHeader`,
+     kept in sync via the workspace `file-open` event). Returning to the list is
+     our own `All` button → `showBrowser`; we do **not** use `view.addAction` or
+     keep Obsidian's native back/forward.
+   - **All popout CSS is scoped to `body.sidecar-popout`.** We add that class
+     ourselves to the popout window's `<body>` (via the typed
      `WorkspaceWindow.doc`), rather than relying on Obsidian's internal popout
-     class name. This *guarantees* the main window is never affected.
+     class name. This *guarantees* the main window is never affected, and our
+     styles never leak out.
    - **Drag region caveat (macOS):** Obsidian's popout is a frameless window
      where the native tab strip (`.workspace-tab-header-container`) is the drag
      region and reserves space for the traffic-light buttons. Because we hide
@@ -48,12 +55,14 @@ no syncing.
      environment-dependent part of the plugin — tune it if window dragging or
      the traffic lights misbehave in a given OS/Obsidian build.
 
-5. **Bounds persistence.** Default to a tall, narrow column
-   (`DEFAULT_SETTINGS.windowBounds` = 420×1000). We open at the saved bounds via
-   `openPopoutLeaf({ x, y, size })`, and capture live geometry
-   (`win.screenX/screenY/outerWidth/outerHeight`) on `resize` (debounced),
-   `blur`, `beforeunload`, and the workspace `window-close` event. There is no
-   DOM "move" event, which is why `blur`/`close` are used to catch repositioning.
+5. **Bounds persistence + sticky width.** Default to a tall, narrow column
+   (`DEFAULT_SETTINGS.windowBounds` = 425×1000). **Width always resets to the
+   default on open**; height and position restore from the last session. A
+   sticky detent (`snapWidthToDefault`) snaps the window back to exactly 425px
+   when resized within `WIDTH_SNAP_PX` of it (via `win.resizeTo`). We capture
+   live geometry (`win.screenX/screenY/outerWidth/outerHeight`) on `resize`
+   (debounced), `blur`, `beforeunload`, and the workspace `window-close` event.
+   There is no DOM "move" event, which is why `blur`/`close` catch repositioning.
 
 ## API correctness
 
@@ -68,10 +77,12 @@ names. Key APIs this plugin depends on:
   gives `.win: Window` and `.doc: Document`.
 - `WorkspaceLeaf.setViewState(...)`, `WorkspaceLeaf.openFile(file, openState?)`,
   `WorkspaceLeaf.detach()`.
-- `ItemView.addAction(icon, title, cb): HTMLElement` (MarkdownView is an ItemView).
+- `View.containerEl` (we inject our bar here) and `View.getDisplayText()` (title);
+  `setIcon(parent, iconId)` for the chevron/list icons.
 - `Plugin.registerView`, `registerDomEvent` (has a `Window` overload),
-  `registerEvent`; `workspace.on('window-close', (win, window) => ...)`.
-- Vault: `getAbstractFileByPath`, `getRoot()`, `TFolder.children`, `TFile`.
+  `registerEvent`; `workspace.on('window-close', ...)`, `workspace.on('file-open', ...)`.
+- Vault: `getAbstractFileByPath`, `getRoot()`, `TFolder.children`, `TFile`,
+  and `vault.on('create' | 'delete' | 'rename', ...)` to keep the list live.
 
 ## File layout
 
