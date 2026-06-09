@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "popout-fix-4";
+export const SIDECAR_BUILD = "popout-fix-5";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -34,6 +34,8 @@ export class SidecarWindowManager {
 	/** True between requesting a popout and its window-open event firing, so we
 	 *  mark exactly the window we just opened (not the user's other popouts). */
 	private pendingPopout = false;
+	/** Whether resize/bounds listeners are attached to the current window. */
+	private boundsAttached = false;
 
 	constructor(plugin: SidecarBrowserPlugin) {
 		this.plugin = plugin;
@@ -74,9 +76,29 @@ export class SidecarWindowManager {
 		// listeners attach reliably — unlike right after openPopoutLeaf(), where
 		// the leaf's container isn't yet a WorkspaceWindow.
 		await this.showBrowser(leaf);
-		this.attachBoundsPersistence(leaf);
 		await this.app.workspace.revealLeaf(leaf);
 		this.pendingPopout = false;
+
+		// Mark + attach bounds after the window is built, retried across a few
+		// ticks: Obsidian finishes wiring the popout (and sets its own <body>
+		// classes) slightly after creation, which would clobber an early mark.
+		this.schedulePopoutSetup(leaf);
+	}
+
+	/**
+	 * Idempotently mark the popout and attach bounds tracking, re-applied over a
+	 * few ticks so the body class survives Obsidian's own late popout setup.
+	 */
+	private schedulePopoutSetup(leaf: WorkspaceLeaf): void {
+		const setup = () => {
+			if (this.leaf !== leaf) return;
+			this.markLeafPopout(leaf);
+			this.ensureBoundsAttached(leaf);
+		};
+		setup();
+		window.setTimeout(setup, 0);
+		window.setTimeout(setup, 60);
+		window.setTimeout(setup, 250);
 	}
 
 	/**
@@ -105,8 +127,7 @@ export class SidecarWindowManager {
 		if (!restored) return;
 
 		this.leaf = restored;
-		this.markLeafPopout(restored);
-		this.attachBoundsPersistence(restored);
+		this.schedulePopoutSetup(restored);
 
 		// Best-effort width reset on a restored window (runtime resize may be a
 		// no-op in the popout; reopening via the command always resets it).
@@ -150,6 +171,7 @@ export class SidecarWindowManager {
 			this.leaf.detach();
 			this.leaf = null;
 		}
+		this.boundsAttached = false;
 	}
 
 	/**
@@ -161,6 +183,7 @@ export class SidecarWindowManager {
 		if (this.getPopoutWindow(this.leaf) !== win) return;
 		this.captureBounds(this.leaf);
 		this.leaf = null;
+		this.boundsAttached = false;
 	}
 
 	/** Best-effort save on plugin unload. */
@@ -254,19 +277,25 @@ export class SidecarWindowManager {
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
 	}
 
-	private attachBoundsPersistence(leaf: WorkspaceLeaf): void {
+	/** Attach resize/bounds listeners to the popout once it's available. Guarded
+	 *  so the retried setup (schedulePopoutSetup) only wires them up a single
+	 *  time. */
+	private ensureBoundsAttached(leaf: WorkspaceLeaf): void {
+		if (this.boundsAttached) return;
 		const win = this.getPopoutWin(leaf);
 		if (!win) return;
+		this.boundsAttached = true;
 
-		// Size changes fire resize; debounce so we don't thrash settings, then
-		// apply the sticky-width detent and persist.
 		this.plugin.registerDomEvent(win, "resize", () => {
+			// Live magnetic snap: jump to the default the instant the width
+			// enters the detent zone while dragging, so it "clicks" into place.
+			this.snapWidthToDefault(win);
+			// Persist the (possibly snapped) geometry, debounced.
 			if (this.saveBoundsTimer !== null) win.clearTimeout(this.saveBoundsTimer);
 			this.saveBoundsTimer = win.setTimeout(() => {
-				this.snapWidthToDefault(win);
 				this.captureBounds(leaf);
 				this.saveBoundsTimer = null;
-			}, 150);
+			}, 300);
 		});
 
 		// There is no DOM "move" event; capture position when the window loses
@@ -277,11 +306,10 @@ export class SidecarWindowManager {
 		);
 	}
 
-	/** Sticky detent: if the window was resized to near the default width,
-	 *  snap it back to exactly the default so it's easy to reset. Resizing more
-	 *  than WIDTH_SNAP_PX away leaves the chosen width alone (until next open).
-	 *  Re-calling with width already at the default is a no-op, so the resize
-	 *  this triggers settles immediately. */
+	/** Magnetic detent: if the live width is within WIDTH_SNAP_PX of the
+	 *  default, jump to exactly the default. Resizing further than that away
+	 *  leaves the chosen width alone. Re-calling at the default is a no-op, so
+	 *  the resize this triggers settles immediately (no loop). */
 	private snapWidthToDefault(win: Window): void {
 		const width = win.outerWidth;
 		if (width === DEFAULT_WIDTH) return;
