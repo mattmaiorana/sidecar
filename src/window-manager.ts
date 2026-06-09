@@ -62,12 +62,12 @@ export class SidecarWindowManager {
 		});
 		this.leaf = leaf;
 
-		// Scope the chrome-hiding CSS to this window only.
-		this.markPopoutWindow(leaf);
-		// Persist bounds as the user resizes / moves / closes the window.
-		this.attachBoundsPersistence(leaf);
-
+		// Render the list first. After this await the popout window is fully
+		// live, so the body class (applied inside showBrowser) and the bounds
+		// listeners attach reliably — unlike right after openPopoutLeaf(), where
+		// the leaf's container isn't yet a WorkspaceWindow.
 		await this.showBrowser(leaf);
+		this.attachBoundsPersistence(leaf);
 		await this.app.workspace.revealLeaf(leaf);
 	}
 
@@ -77,6 +77,7 @@ export class SidecarWindowManager {
 			type: VIEW_TYPE_SIDECAR_BROWSER,
 			active: true,
 		});
+		this.ensurePopoutClass(leaf);
 	}
 
 	/**
@@ -133,6 +134,10 @@ export class SidecarWindowManager {
 	 * swapped back to the list (the MarkdownView's container is torn down).
 	 */
 	private decorateNoteHeader(leaf: WorkspaceLeaf): void {
+		// Self-heal the body class on note renders too, so the bar's CSS applies
+		// even if the list state was never shown first.
+		this.ensurePopoutClass(leaf);
+
 		const view = leaf.view;
 		const container = view.containerEl;
 		const title = view.getDisplayText();
@@ -163,21 +168,42 @@ export class SidecarWindowManager {
 	// --- popout window plumbing -------------------------------------------
 
 	/** The WorkspaceWindow hosting this leaf, or null if it lives in the main
-	 *  window (or the popout is gone). */
+	 *  window (or the popout is gone). Used for identity checks on events. */
 	private getPopoutWindow(leaf: WorkspaceLeaf): WorkspaceWindow | null {
 		const container = leaf.getContainer();
 		return container instanceof WorkspaceWindow ? container : null;
 	}
 
-	private markPopoutWindow(leaf: WorkspaceLeaf): void {
-		const popout = this.getPopoutWindow(leaf);
-		popout?.doc.body.classList.add(POPOUT_BODY_CLASS);
+	/**
+	 * The popout window's document, derived from the live view's element — which
+	 * is reliable once the view has rendered, unlike `getContainer()` right
+	 * after `openPopoutLeaf()`. Returns null if the leaf is (unexpectedly) in
+	 * the main window. `document` here is the main window's document, so the
+	 * inequality check identifies a separate popout document.
+	 */
+	private getPopoutDoc(leaf: WorkspaceLeaf): Document | null {
+		const viaView = leaf.view?.containerEl?.ownerDocument ?? null;
+		if (viaView && viaView !== document) return viaView;
+		return this.getPopoutWindow(leaf)?.doc ?? null;
+	}
+
+	private getPopoutWin(leaf: WorkspaceLeaf): Window | null {
+		return this.getPopoutDoc(leaf)?.defaultView ?? null;
+	}
+
+	/**
+	 * Add our marker class to the popout window's <body> so the popout-scoped
+	 * CSS applies. Idempotent and self-healing — called on every state render
+	 * because the class can otherwise be missing (the container isn't reliably a
+	 * WorkspaceWindow synchronously right after the window opens).
+	 */
+	private ensurePopoutClass(leaf: WorkspaceLeaf): void {
+		this.getPopoutDoc(leaf)?.body.classList.add(POPOUT_BODY_CLASS);
 	}
 
 	private attachBoundsPersistence(leaf: WorkspaceLeaf): void {
-		const popout = this.getPopoutWindow(leaf);
-		if (!popout) return;
-		const win = popout.win;
+		const win = this.getPopoutWin(leaf);
+		if (!win) return;
 
 		// Size changes fire resize; debounce so we don't thrash settings, then
 		// apply the sticky-width detent and persist.
@@ -213,9 +239,8 @@ export class SidecarWindowManager {
 
 	/** Read the live window geometry and persist it to settings. */
 	private captureBounds(leaf: WorkspaceLeaf): void {
-		const popout = this.getPopoutWindow(leaf);
-		if (!popout) return;
-		const win = popout.win;
+		const win = this.getPopoutWin(leaf);
+		if (!win) return;
 
 		// Guard against transient 0/garbage values while the window settles.
 		if (win.outerWidth < 50 || win.outerHeight < 50) return;
