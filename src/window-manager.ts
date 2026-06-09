@@ -1,18 +1,16 @@
-import {
-	MarkdownView,
-	TFile,
-	WorkspaceLeaf,
-	WorkspaceWindow,
-} from "obsidian";
+import { TFile, WorkspaceLeaf, WorkspaceWindow } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 import { VIEW_TYPE_SIDECAR_BROWSER } from "./project-browser-view";
-import type { WindowBounds } from "./settings";
+import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 
 /** Class added to the popout window's <body> so all chrome-hiding CSS can be
  *  scoped to it — guaranteeing the main window is never affected. */
 const POPOUT_BODY_CLASS = "sidecar-popout";
-/** Marker on the back-arrow view action so we never add it twice. */
-const BACK_ACTION_CLASS = "sidecar-back-action";
+/** The width we always open at, and the detent the window snaps back to. */
+const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
+/** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
+ *  so it's easy to "click" the column back to its default width. */
+const WIDTH_SNAP_PX = 30;
 
 /**
  * Owns the single Sidecar popout window and its one leaf.
@@ -53,7 +51,9 @@ export class SidecarWindowManager {
 
 		const bounds = this.plugin.settings.windowBounds;
 		const leaf = this.app.workspace.openPopoutLeaf({
-			size: { width: bounds.width, height: bounds.height },
+			// Width always resets to the default on open; height and position are
+			// restored from the last session.
+			size: { width: DEFAULT_WIDTH, height: bounds.height },
 			// x/y are only meaningful once captured; omit on first-ever open so
 			// the OS centers the window.
 			...(bounds.x !== null && bounds.y !== null
@@ -80,12 +80,12 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Swap the leaf to a real MarkdownView on `file`, then ensure a back-arrow
-	 * action is present in its header. Called from the browser view on click.
+	 * Swap the leaf to a real MarkdownView on `file`. Navigating back to the
+	 * list is handled by Obsidian's own back/forward buttons (the open is a
+	 * history entry), so we add no custom back control here.
 	 */
 	async openFileInSidecar(leaf: WorkspaceLeaf, file: TFile): Promise<void> {
 		await leaf.openFile(file, { active: true });
-		this.ensureBackAction(leaf);
 	}
 
 	/** Close the popout window if it is open (used by a command / on demand). */
@@ -113,20 +113,6 @@ export class SidecarWindowManager {
 		if (this.leaf) this.captureBounds(this.leaf);
 	}
 
-	// --- back-arrow action -------------------------------------------------
-
-	private ensureBackAction(leaf: WorkspaceLeaf): void {
-		const view = leaf.view;
-		if (!(view instanceof MarkdownView)) return;
-		// Don't add a second one if this MarkdownView instance already has it.
-		if (view.containerEl.querySelector("." + BACK_ACTION_CLASS)) return;
-
-		const actionEl = view.addAction("arrow-left", "Back to projects", () => {
-			void this.showBrowser(leaf);
-		});
-		actionEl.addClass(BACK_ACTION_CLASS);
-	}
-
 	// --- popout window plumbing -------------------------------------------
 
 	/** The WorkspaceWindow hosting this leaf, or null if it lives in the main
@@ -146,13 +132,15 @@ export class SidecarWindowManager {
 		if (!popout) return;
 		const win = popout.win;
 
-		// Size changes fire resize; debounce so we don't thrash settings.
+		// Size changes fire resize; debounce so we don't thrash settings, then
+		// apply the sticky-width detent and persist.
 		this.plugin.registerDomEvent(win, "resize", () => {
 			if (this.saveBoundsTimer !== null) win.clearTimeout(this.saveBoundsTimer);
 			this.saveBoundsTimer = win.setTimeout(() => {
+				this.snapWidthToDefault(win);
 				this.captureBounds(leaf);
 				this.saveBoundsTimer = null;
-			}, 400);
+			}, 150);
 		});
 
 		// There is no DOM "move" event; capture position when the window loses
@@ -161,6 +149,19 @@ export class SidecarWindowManager {
 		this.plugin.registerDomEvent(win, "beforeunload", () =>
 			this.captureBounds(leaf)
 		);
+	}
+
+	/** Sticky detent: if the window was resized to near the default width,
+	 *  snap it back to exactly the default so it's easy to reset. Resizing more
+	 *  than WIDTH_SNAP_PX away leaves the chosen width alone (until next open).
+	 *  Re-calling with width already at the default is a no-op, so the resize
+	 *  this triggers settles immediately. */
+	private snapWidthToDefault(win: Window): void {
+		const width = win.outerWidth;
+		if (width === DEFAULT_WIDTH) return;
+		if (Math.abs(width - DEFAULT_WIDTH) <= WIDTH_SNAP_PX) {
+			win.resizeTo(DEFAULT_WIDTH, win.outerHeight);
+		}
 	}
 
 	/** Read the live window geometry and persist it to settings. */
