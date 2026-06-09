@@ -118,6 +118,11 @@ plugin in Obsidian (Cmd+P → "Reload app without saving", or toggle it off/on).
 - Tabs for indentation (matches the Obsidian sample-plugin house style).
 - Typecheck must stay clean.
 - Make small, logical commits.
+- **Stay inside this repo.** Do all work within the project folder; the Obsidian
+  type defs are already in-repo at `node_modules/obsidian/obsidian.d.ts`. Don't
+  read or write user files outside it — no network volumes, iCloud, other
+  vaults, or `~/Library`. Ask first if something outside seems necessary. Web
+  searches are fine.
 
 ## Out of scope (see FUTURE_PLANS.md)
 
