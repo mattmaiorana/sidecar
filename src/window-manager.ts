@@ -1,4 +1,4 @@
-import { TFile, WorkspaceLeaf, WorkspaceWindow, setIcon } from "obsidian";
+import { TFile, WorkspaceLeaf, WorkspaceWindow } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 import { VIEW_TYPE_SIDECAR_BROWSER } from "./project-browser-view";
 import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "popout-fix-5";
+export const SIDECAR_BUILD = "v1-note-1";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -46,42 +46,27 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Open the Sidecar popout fresh (closing any existing one) and show the
-	 * project-browser list at the default width.
+	 * Open the Sidecar popout fresh (closing any existing one) and show
+	 * `file` at the default width.
 	 */
-	async open(): Promise<void> {
-		// Always (re)create fresh. Reopening is the only reliable way to reset
-		// the column to the default width — the popout's *creation* size is
-		// honored, but resizing an existing popout at runtime is not. It also
-		// guarantees the body class is (re)applied through every marking path.
+	async open(file: TFile): Promise<void> {
 		this.close();
 
 		const bounds = this.plugin.settings.windowBounds;
-		// Mark the next-opened popout window as ours (see handleWindowOpen).
 		this.pendingPopout = true;
 		const leaf = this.app.workspace.openPopoutLeaf({
-			// Width always resets to the default on open; height and position are
-			// restored from the last session.
 			size: { width: DEFAULT_WIDTH, height: bounds.height },
-			// x/y are only meaningful once captured; omit on first-ever open so
-			// the OS centers the window.
 			...(bounds.x !== null && bounds.y !== null
 				? { x: bounds.x, y: bounds.y }
 				: {}),
 		});
 		this.leaf = leaf;
 
-		// Render the list first. After this await the popout window is fully
-		// live, so the body class (applied inside showBrowser) and the bounds
-		// listeners attach reliably — unlike right after openPopoutLeaf(), where
-		// the leaf's container isn't yet a WorkspaceWindow.
-		await this.showBrowser(leaf);
+		await leaf.openFile(file, { active: true });
+		this.decorateNoteHeader(leaf);
 		await this.app.workspace.revealLeaf(leaf);
 		this.pendingPopout = false;
 
-		// Mark + attach bounds after the window is built, retried across a few
-		// ticks: Obsidian finishes wiring the popout (and sets its own <body>
-		// classes) slightly after creation, which would clobber an early mark.
 		this.schedulePopoutSetup(leaf);
 	}
 
@@ -219,16 +204,7 @@ export class SidecarWindowManager {
 
 		const bar = createDiv({ cls: "sidecar-bar sidecar-titlebar" });
 		bar.dataset.sidecarBuild = SIDECAR_BUILD;
-		const back = bar.createDiv({
-			cls: "sidecar-bar-back",
-			attr: { role: "button", "aria-label": "Back to all notes" },
-		});
-		setIcon(back.createSpan({ cls: "sidecar-bar-back-icon" }), "chevron-left");
-		back.createSpan({ cls: "sidecar-bar-back-label", text: "All" });
-		back.addEventListener("click", () => void this.showBrowser(leaf));
-
 		bar.createSpan({ cls: "sidecar-bar-title", text: title });
-
 		container.prepend(bar);
 	}
 
@@ -271,10 +247,20 @@ export class SidecarWindowManager {
 		if (doc) this.applyPopoutMarks(doc);
 	}
 
-	/** Add the scoping class + a visible build stamp to a popout document. */
+	/** Add the scoping class + a visible build stamp to a popout document.
+	 *  A MutationObserver watches for Obsidian wiping the class during its own
+	 *  window initialization and immediately re-adds it. */
 	private applyPopoutMarks(doc: Document): void {
 		doc.body.classList.add(POPOUT_BODY_CLASS);
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
+
+		const observer = new MutationObserver(() => {
+			if (!doc.body.classList.contains(POPOUT_BODY_CLASS)) {
+				doc.body.classList.add(POPOUT_BODY_CLASS);
+			}
+		});
+		observer.observe(doc.body, { attributes: true, attributeFilter: ['class'] });
+		doc.defaultView?.setTimeout(() => observer.disconnect(), 3000);
 	}
 
 	/** Attach resize/bounds listeners to the popout once it's available. Guarded

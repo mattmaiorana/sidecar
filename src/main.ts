@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, WorkspaceWindow } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
 	SidecarBrowserSettings,
@@ -29,15 +29,25 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// Primary entry point.
 		this.addCommand({
 			id: "open-sidecar-browser",
-			name: "Open Sidecar Browser",
+			name: "Open current note in Sidecar",
 			callback: () => {
-				void this.windowManager.open();
+				const file = this.app.workspace.getActiveFile();
+				if (!file) {
+					new Notice("Open a note first to view it in Sidecar.");
+					return;
+				}
+				void this.windowManager.open(file);
 			},
 		});
 
 		// Optional ribbon shortcut for the same command.
-		this.addRibbonIcon("panel-right", "Open Sidecar Browser", () => {
-			void this.windowManager.open();
+		this.addRibbonIcon("panel-right", "Open current note in Sidecar", () => {
+			const file = this.app.workspace.getActiveFile();
+			if (!file) {
+				new Notice("Open a note first to view it in Sidecar.");
+				return;
+			}
+			void this.windowManager.open(file);
 		});
 
 		// When the user closes the popout, persist its final bounds and let the
@@ -61,6 +71,37 @@ export default class SidecarBrowserPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("file-open", () => {
 				this.windowManager.refreshNoteHeader();
+			})
+		);
+
+		// Right-click a .md file in the file tree → "Open in Sidecar".
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				if (!(file instanceof TFile) || file.extension !== "md") return;
+				menu.addItem((item) =>
+					item
+						.setTitle("Open in Sidecar")
+						.setIcon("panel-right")
+						.onClick(() => void this.windowManager.open(file))
+				);
+			})
+		);
+
+		// Add a toolbar button to every MarkdownView in the main window.
+		const decoratedViews = new WeakSet<MarkdownView>();
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", (leaf) => {
+				if (!leaf) return;
+				// Skip any leaf living inside a popout (the sidecar itself).
+				if (leaf.getContainer() instanceof WorkspaceWindow) return;
+				const view = leaf.view;
+				if (!(view instanceof MarkdownView)) return;
+				if (decoratedViews.has(view)) return;
+				decoratedViews.add(view);
+				view.addAction("panel-right", "Open in Sidecar", () => {
+					const file = view.file;
+					if (file) void this.windowManager.open(file);
+				});
 			})
 		);
 

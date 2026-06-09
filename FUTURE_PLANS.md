@@ -3,6 +3,17 @@
 Deliberately parked items — **out of scope for v1**, captured here so they're not
 lost. Don't build these without a conscious decision to expand scope.
 
+## v1 parked: folder-listing browser view
+
+`ProjectBrowserView` (`src/project-browser-view.ts`) implements a folder listing
+that shows direct-child `.md` files and lets you click through to edit them in
+the same leaf (with a "← All" back button). v1 was simplified to nail a
+single-note popout experience first. Options for v2:
+
+- Revisit as a full project browser with folder navigation.
+- Delete the code if the note-only model proves sufficient and the list adds
+  more complexity than value.
+
 ## Explicitly deferred from v1
 
 - **Search / filter in the list.** A quick filter box to narrow the project list.
