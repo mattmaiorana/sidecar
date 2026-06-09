@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "popout-fix-2";
+export const SIDECAR_BUILD = "popout-fix-3";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -89,6 +89,29 @@ export class SidecarWindowManager {
 		if (!this.pendingPopout) return;
 		this.pendingPopout = false;
 		this.applyPopoutMarks(win.doc);
+	}
+
+	/**
+	 * After an Obsidian reload, the popout and its list view are restored
+	 * directly by the workspace, bypassing open(). Adopt that restored Sidecar
+	 * leaf so it's managed like one we opened: marked for the scoped CSS,
+	 * bounds-tracked, and reset to the default width. (Called on layout-ready.)
+	 */
+	adoptRestoredSidecar(): void {
+		if (this.leaf && this.getPopoutWin(this.leaf)) return;
+
+		const restored = this.app.workspace
+			.getLeavesOfType(VIEW_TYPE_SIDECAR_BROWSER)
+			.find((leaf) => this.getPopoutWin(leaf));
+		if (!restored) return;
+
+		this.leaf = restored;
+		this.markPopout(restored.view.containerEl);
+		this.attachBoundsPersistence(restored);
+
+		// Width resets on every load — including a restored window.
+		const win = this.getPopoutWin(restored);
+		if (win) win.resizeTo(DEFAULT_WIDTH, win.outerHeight);
 	}
 
 	/** Swap the leaf to the folder-listing state. Used on open and on "back". */
@@ -226,6 +249,17 @@ export class SidecarWindowManager {
 	private applyPopoutMarks(doc: Document): void {
 		doc.body.classList.add(POPOUT_BODY_CLASS);
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
+	}
+
+	/**
+	 * Mark the popout from any element living in it. Public so the browser view
+	 * can self-mark on render — that path also covers a view Obsidian restored
+	 * on startup, which never goes through showBrowser. `document` is the main
+	 * window's, so the inequality identifies a separate popout document.
+	 */
+	markPopout(el: HTMLElement): void {
+		const doc = el.ownerDocument;
+		if (doc && doc !== document) this.applyPopoutMarks(doc);
 	}
 
 	private attachBoundsPersistence(leaf: WorkspaceLeaf): void {

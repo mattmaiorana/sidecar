@@ -107,11 +107,24 @@ body.sidecar-popout
 	max-width: none !important;
 	margin-inline: 0 !important;
 }
-/* Trim the left/right content padding so it reads tight like a notes panel. */
-body.sidecar-popout .markdown-preview-view,
-body.sidecar-popout .markdown-source-view .cm-content {
-	padding-left: 16px !important;
-	padding-right: 16px !important;
+
+/* Content padding (vertical horizontal). The editor scroller owns the inset;
+   we do NOT pad .cm-content as well (that would stack on top of this). */
+body.sidecar-popout .markdown-source-view .cm-scroller,
+body.sidecar-popout .markdown-preview-view {
+	padding: 16px 24px !important;
+}
+
+/* Panel font size for both editing and reading. */
+body.sidecar-popout .markdown-source-view .cm-content,
+body.sidecar-popout .markdown-preview-view {
+	font-size: 14px !important;
+}
+
+/* The note title already shows in our top bar — hide the duplicate inline
+   title in the body. */
+body.sidecar-popout .inline-title {
+	display: none !important;
 }
 
 /* ----- Project-browser (list) view --------------------------------------- */

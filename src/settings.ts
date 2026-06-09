@@ -26,7 +26,7 @@ export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	windowBounds: {
 		x: null,
 		y: null,
-		width: 425,
+		width: 375,
 		height: 1000,
 	},
 };

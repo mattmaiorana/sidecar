@@ -56,13 +56,21 @@ no syncing.
      the traffic lights misbehave in a given OS/Obsidian build.
 
 5. **Bounds persistence + sticky width.** Default to a tall, narrow column
-   (`DEFAULT_SETTINGS.windowBounds` = 425×1000). **Width always resets to the
+   (`DEFAULT_SETTINGS.windowBounds` = 375×1000). **Width always resets to the
    default on open**; height and position restore from the last session. A
-   sticky detent (`snapWidthToDefault`) snaps the window back to exactly 425px
-   when resized within `WIDTH_SNAP_PX` of it (via `win.resizeTo`). We capture
-   live geometry (`win.screenX/screenY/outerWidth/outerHeight`) on `resize`
-   (debounced), `blur`, `beforeunload`, and the workspace `window-close` event.
-   There is no DOM "move" event, which is why `blur`/`close` catch repositioning.
+   sticky detent (`snapWidthToDefault`) snaps the window back to exactly the
+   default when resized within `WIDTH_SNAP_PX` of it (via `win.resizeTo`). We
+   capture live geometry (`win.screenX/screenY/outerWidth/outerHeight`) on
+   `resize` (debounced), `blur`, `beforeunload`, and the workspace
+   `window-close` event. There is no DOM "move" event, which is why `blur`/
+   `close` catch repositioning.
+
+6. **Restored popouts are adopted.** On reload Obsidian restores the popout +
+   its list view *directly*, bypassing `open()` — so the view self-marks the
+   body class on render (`markPopout`), and `adoptRestoredSidecar()` (on
+   `onLayoutReady`) re-attaches bounds tracking and resets the width. Without
+   this, a restored window is unmanaged: native chrome shows and width/sticky
+   don't work.
 
 ## API correctness
 

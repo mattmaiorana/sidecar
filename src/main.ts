@@ -65,6 +65,13 @@ export default class SidecarBrowserPlugin extends Plugin {
 		);
 
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
+
+		// If Obsidian restored a Sidecar popout from a previous session, adopt
+		// it so it's managed (marked, bounds-tracked, width reset) like a fresh
+		// open instead of a half-styled, unmanaged window.
+		this.app.workspace.onLayoutReady(() => {
+			this.windowManager.adoptRestoredSidecar();
+		});
 	}
 
 	onunload(): void {
