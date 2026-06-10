@@ -191,9 +191,16 @@ body.sidecar-popout .sidecar-resize-handle {
 	position: fixed;
 	top: 0;
 	right: 0;
-	width: 8px;
+	width: 16px;
 	height: 100%;
 	cursor: ew-resize;
 	z-index: 9999;
 	-webkit-app-region: no-drag;
+	box-sizing: border-box;
+	border-left: 1px solid var(--background-modifier-border);
+	transition: border-color 120ms;
+}
+body.sidecar-popout .sidecar-resize-handle:hover,
+body.sidecar-popout .sidecar-resize-handle:active {
+	border-left-color: var(--interactive-accent);
 }
