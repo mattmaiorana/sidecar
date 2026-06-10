@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "v1-handle-1";
+export const SIDECAR_BUILD = "v1-inject-1";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -33,8 +33,6 @@ export class SidecarWindowManager {
 	private pendingPopout = false;
 	/** Leaves whose resize/bounds listeners are already attached. */
 	private boundsAttached = new Set<WorkspaceLeaf>();
-	/** Docs that already have a MutationObserver watching the body class. */
-	private observedDocs = new WeakSet<Document>();
 
 	constructor(plugin: SidecarBrowserPlugin) {
 		this.plugin = plugin;
@@ -237,23 +235,90 @@ export class SidecarWindowManager {
 		if (doc) this.applyPopoutMarks(doc);
 	}
 
-	/** Add the scoping class + a visible build stamp to a popout document.
-	 *  Attaches a permanent MutationObserver (one per document) that re-adds the
-	 *  class any time Obsidian wipes it — including on focus/blur transitions.
-	 *  The observer lives for the window's lifetime; no explicit cleanup needed. */
+	/** Add a debug class + build stamp to the body, and inject a <style> element
+	 *  directly into the popout document's <head>. The injected CSS carries all
+	 *  the chrome-hiding and layout rules unconditionally — no body class is
+	 *  needed for them to apply — so nothing Obsidian does to body.class can
+	 *  ever drop our styling. Idempotent: guarded by the style element's id. */
 	private applyPopoutMarks(doc: Document): void {
-		doc.body.classList.add(POPOUT_BODY_CLASS);
+		doc.body.classList.add(POPOUT_BODY_CLASS); // kept for debug/inspection
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
+		this.injectPopoutStyles(doc);
+	}
 
-		if (!this.observedDocs.has(doc)) {
-			this.observedDocs.add(doc);
-			const observer = new MutationObserver(() => {
-				if (!doc.body.classList.contains(POPOUT_BODY_CLASS)) {
-					doc.body.classList.add(POPOUT_BODY_CLASS);
-				}
-			});
-			observer.observe(doc.body, { attributes: true, attributeFilter: ["class"] });
-		}
+	private injectPopoutStyles(doc: Document): void {
+		const STYLE_ID = "sidecar-injected-styles";
+		if (doc.getElementById(STYLE_ID)) return;
+		const el = doc.createElement("style");
+		el.id = STYLE_ID;
+		el.textContent = `
+:root {
+  --sidecar-traffic-inset: 76px;
+  --sidecar-bar-height: 40px;
+  --file-line-width: 100%;
+}
+.workspace-tab-header-container { display: none !important; }
+.view-header { display: none !important; }
+.status-bar, .workspace-ribbon { display: none !important; }
+.workspace-leaf-content { display: flex; flex-direction: column; }
+.view-content { flex: 1 1 auto; min-height: 0; }
+.sidecar-bar {
+  -webkit-app-region: drag;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--sidecar-bar-height);
+  padding: 0 10px 0 var(--sidecar-traffic-inset);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.sidecar-bar-back {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 3px 7px 3px 4px;
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+}
+.sidecar-bar-back:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+.sidecar-bar-back-icon { display: inline-flex; }
+.sidecar-bar-back-icon svg { width: var(--icon-s); height: var(--icon-s); }
+.sidecar-bar-title {
+  font-weight: var(--font-medium);
+  font-size: var(--font-ui-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.markdown-source-view.is-readable-line-width .cm-sizer,
+.markdown-preview-view.is-readable-line-width .markdown-preview-sizer {
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+.markdown-source-view .cm-scroller,
+.markdown-preview-view { padding: 16px 24px !important; }
+.markdown-source-view .cm-content,
+.markdown-preview-view { font-size: 14px !important; }
+.inline-title { display: none !important; }
+.sidecar-resize-handle {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 9999;
+  -webkit-app-region: no-drag;
+}
+		`;
+		doc.head.appendChild(el);
 	}
 
 	/**
