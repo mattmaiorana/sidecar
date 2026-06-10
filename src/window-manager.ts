@@ -317,12 +317,12 @@ export class SidecarWindowManager {
   z-index: 9999;
   -webkit-app-region: no-drag;
   box-sizing: border-box;
-  border-left: 1px solid var(--background-modifier-border);
+  border-right: 1px solid var(--background-modifier-border);
   transition: border-color 120ms;
 }
 .sidecar-resize-handle:hover,
 .sidecar-resize-handle:active {
-  border-left-color: var(--interactive-accent);
+  border-right-color: var(--interactive-accent);
 }
 		`;
 		doc.head.appendChild(el);
