@@ -49,17 +49,27 @@ If revisited: the key insight is to do snap math *before* calling `resizeTo`
 
 ## Pin state persistence
 
-The always-on-top pin state is currently in-memory only. On Obsidian reload,
-pinned windows lose their pin. To persist: save a set of pinned leaf/file paths
-in plugin settings and re-apply `setAlwaysOnTop` in `adoptRestoredSidecar`.
+The always-on-top pin state is in-memory only. On Obsidian reload, pinned windows
+lose their pin. To persist: save a set of pinned file paths in plugin settings and
+re-apply `setAlwaysOnTop` when a Sidecar is restored — which requires the
+restore-adoption feature below.
 
-## Restored-popout adoption fingerprinting
+## Safe restore adoption (was removed)
 
-`adoptRestoredSidecar` currently adopts *all* markdown leaves in popout windows,
-which may accidentally style user-created popouts that aren't Sidecars. A more
-targeted approach: inject a `data-sidecar-leaf` attribute on the popout's
-`<body>` (or store leaf/file paths in plugin settings) so adoption is opt-in and
-precise.
+The plugin used to run `adoptRestoredSidecar()` on `onLayoutReady` to re-skin
+Sidecar popouts that Obsidian restored from the previous session. It was removed
+because it adopted *all* markdown popouts — including the user's own native
+"Open in new window" popouts — and forcibly shrank them to 375px and stripped
+their chrome on every reload. Today a restored Sidecar simply comes back as a
+plain popout (reopen to re-skin).
+
+To re-add it safely it must only touch *our* windows. Approaches:
+- Persist the set of Sidecar file paths in settings, and on restore only adopt
+  popouts showing one of those files (imperfect — the same note could be in a
+  user popout).
+- Look for a marker that survives Obsidian's serialize/restore. The injected
+  `<style>` and `body` class do **not** survive (the popout DOM is rebuilt), so
+  this needs a leaf-level or settings-level identity, not a DOM marker.
 
 ## Other deferred items
 

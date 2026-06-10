@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-sidecar-browser",
 	"name": "Sidecar Browser",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"minAppVersion": "1.5.0",
 	"description": "Opens a tall, narrow popout window that acts as a portable mini-Obsidian for navigating and editing project notes, while the main app stays untouched.",
 	"author": "Matt Maiorana",

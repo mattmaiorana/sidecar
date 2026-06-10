@@ -1,31 +1,15 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 
-/**
- * Saved bounds for the popout window, in screen coordinates.
- * `x`/`y` are the top-left position; `width`/`height` are the outer size.
- * `null` means "not yet captured" — fall back to the default size.
- */
-export interface WindowBounds {
-	x: number | null;
-	y: number | null;
-	width: number;
-	height: number;
-}
-
 export interface SidecarBrowserSettings {
-	/** Last known popout window bounds; height is restored on next open. */
-	windowBounds: WindowBounds;
+	/** Last popout window height, restored on next open. Width always resets to
+	 *  the default; position is computed fresh from the main window. */
+	windowHeight: number;
 }
 
-/** A tall, narrow column by default — the whole point of the plugin. */
+/** A tall column by default — the whole point of the plugin. */
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
-	windowBounds: {
-		x: null,
-		y: null,
-		width: 375,
-		height: 1000,
-	},
+	windowHeight: 1000,
 };
 
 export class SidecarBrowserSettingTab extends PluginSettingTab {
@@ -43,6 +27,8 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Sidecar Browser")
 			.setHeading()
-			.setDesc("Opens notes in a tall, narrow popout window alongside your main Obsidian window.");
+			.setDesc(
+				"Opens notes in a tall, narrow popout window alongside your main Obsidian window."
+			);
 	}
 }

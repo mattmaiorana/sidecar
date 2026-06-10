@@ -88,30 +88,17 @@ export default class SidecarBrowserPlugin extends Plugin {
 		);
 
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
-
-		// If Obsidian restored a Sidecar popout from a previous session, adopt
-		// it so it's managed (marked, bounds-tracked, width reset) like a fresh
-		// open instead of a half-styled, unmanaged window.
-		this.app.workspace.onLayoutReady(() => {
-			this.windowManager.adoptRestoredSidecar();
-		});
 	}
 
 	onunload(): void {
-		// Best-effort: capture the window geometry before we go.
-		this.windowManager?.saveBoundsNow();
+		// Reverse every mark we made (styles, header bars, pins) and save the
+		// final window geometry. Leaves the popout windows open as plain popouts.
+		this.windowManager?.teardown();
 	}
 
 	async loadSettings(): Promise<void> {
 		const data = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
-		// windowBounds is nested — merge explicitly so a partial saved blob
-		// can't drop the default width/height.
-		this.settings.windowBounds = Object.assign(
-			{},
-			DEFAULT_SETTINGS.windowBounds,
-			data?.windowBounds
-		);
 	}
 
 	async saveSettings(): Promise<void> {

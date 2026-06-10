@@ -3,6 +3,38 @@
 All notable changes to Sidecar Browser are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0]
+
+First stable release. The plugin was reduced to a focused, note-only model and
+hardened for use in a live vault.
+
+### Added
+- **Open in Sidecar from anywhere** — command, ribbon icon, file-tree
+  right-click, and an action button in every note's editor toolbar.
+- **Multiple independent Sidecars** open at once.
+- **Pin button** (always-on-top) in the top bar, shown only when Obsidian's
+  Electron remote API is reachable so it never silently no-ops.
+- **Clean teardown** — disabling the plugin removes all injected styling, header
+  bars, and always-on-top state, leaving the windows as plain popouts.
+
+### Changed
+- **Note-only model.** The folder-listing project browser was removed; a Sidecar
+  shows a single note as a real `MarkdownView`.
+- **Minimal top bar** — just the macOS traffic-light drag region and the pin
+  button; the note's own inline title (18px) shows in the content area.
+- **Positioning** — opens offset from the main window's top-right corner,
+  computed fresh each time (clamped below the menu bar); only **height** is
+  remembered. Width always resets to the 375px default.
+- **Styling is injected at runtime** into each popout's `<head>` — there is no
+  longer a `styles.css` file.
+
+### Fixed / removed (safety)
+- **No longer hijacks your own popouts.** The previous restore-adoption logic
+  resized and restyled *every* markdown popout on reload — including windows you
+  opened with Obsidian's native "Open in new window." That logic was removed.
+- Removed the custom resize handle and magnetic snap-width, the dead `close()`
+  path, and write-only saved window x/y/width.
+
 ## [Unreleased]
 
 ### Design pass (post-v1)

@@ -36,35 +36,45 @@ no syncing.
    names are used so other plugins don't interfere.
    - The bar (`decorateHeader`) is injected as the first child of `view.containerEl`.
    - **All popout CSS is injected directly into the popout's `<head>`** (see
-     `injectPopoutStyles` in `window-manager.ts`) so it is immune to Obsidian
-     wiping body classes. The `body.sidecar-popout` class is still added for
-     debug/inspection, and `styles.css` mirrors the same rules as a readable
-     reference and fallback.
+     `injectPopoutStyles` in `window-manager.ts`) — this is the *single source of
+     truth* for Sidecar styling. The rules are **not** scoped to a body class, so
+     nothing Obsidian does to `body.class` can drop them. `body.sidecar-popout`
+     is still added for debug/inspection. There is **no `styles.css`** — a shared
+     stylesheet would either be scoped to the wiped body class (non-functional)
+     or to a generic popout class (would skin the user's own popouts too).
    - **Drag region (macOS):** `-webkit-app-region: drag` on `.sidecar-bar` with
      left inset for traffic lights. Interactive controls are marked `no-drag`.
 
-5. **Bounds persistence.** Default to a tall, narrow column
-   (`DEFAULT_SETTINGS.windowBounds` = 375×1000). **Width always resets to
-   `DEFAULT_WIDTH` on open** (because `openPopoutLeaf`'s `size.width` parameter
-   is silently ignored by Obsidian — width is forced via `win.resizeTo` in
-   `handleWindowOpen`). Height is saved/restored. Position is always computed
-   fresh from the main window's live geometry (right edge +40px, top −40px) —
-   saved position is never used for placement. Geometry is captured on `resize`
+5. **Only our windows are ever touched.** Styling and resizing happen exclusively
+   on windows opened via `open()`, gated by the `pendingPopout` flag in
+   `handleWindowOpen`. We do **not** adopt restored or user-created popouts — an
+   earlier `adoptRestoredSidecar()` did, and it hijacked the user's own native
+   "Open in new window" popouts (shrank them to 375px, stripped their chrome) on
+   every reload. It was removed. A Sidecar that survives a reload simply comes
+   back as a plain popout; reopen it to re-skin.
+
+6. **Bounds persistence.** Default height 1000 (`DEFAULT_SETTINGS.windowHeight`);
+   width is the `DEFAULT_WIDTH` const (375). **Width always resets to
+   `DEFAULT_WIDTH` on open** (because `openPopoutLeaf`'s `size.width` parameter is
+   silently ignored by Obsidian — width is forced via `win.resizeTo` in
+   `handleWindowOpen`). Only **height** is saved/restored. Position is always
+   computed fresh from the main window's live geometry (right edge +40px, top
+   −40px, y clamped to the screen's available top). Height is captured on `resize`
    (debounced 300ms), `blur`, `beforeunload`, and `window-close`.
 
-6. **Restored popouts are adopted.** On reload, `adoptRestoredSidecar()` (called
-   on `onLayoutReady`) finds all markdown leaves in popout windows and re-attaches
-   styles, header, and bounds tracking. Without this a restored window is
-   unmanaged: native chrome shows, no header, no bounds tracking. Note: this
-   approach adopts *all* markdown popouts, not only Sidecars — see FUTURE_PLANS
-   for a fingerprinting approach if that becomes a problem.
+7. **Always-on-top (pin button).** The pin button calls `setAlwaysOnTop(popoutWin,
+   pinned)`, which injects a `<script>` into the popout document to call
+   `require('@electron/remote').getCurrentWindow().setAlwaysOnTop()` (fallback
+   `require('electron').remote`). Script injection is necessary so
+   `getCurrentWindow()` resolves to the popout's BrowserWindow, not the main
+   window's. The button is only rendered when `alwaysOnTopSupported()` confirms
+   the remote module is reachable — otherwise it would toggle "active" while doing
+   nothing. Pin state is in-memory only (not persisted across reloads).
 
-7. **Always-on-top (pin button).** The pin button in the header calls
-   `setAlwaysOnTop(popoutWin, pinned)` which injects a `<script>` into the popout
-   document to call `require('@electron/remote').getCurrentWindow().setAlwaysOnTop()`
-   (with a fallback to `require('electron').remote`). The script-injection pattern
-   is necessary so `getCurrentWindow()` resolves to the popout's BrowserWindow
-   rather than the main window's. Pin state is in-memory only (not persisted).
+8. **Clean teardown.** `onunload` calls `windowManager.teardown()`, which reverses
+   every mark (saves height, unpins, removes the injected `<style>`, our header
+   bar, and the body class) so disabling the plugin leaves the popouts as plain
+   windows with no leftover styling or stuck always-on-top state.
 
 ## API correctness
 
@@ -89,10 +99,12 @@ names. Key APIs this plugin depends on:
 manifest.json       plugin metadata (id, isDesktopOnly)
 src/main.ts         Plugin entry: load settings, commands, ribbon, event wiring.
 src/window-manager.ts  Manages all popout windows: open, mark, header, pin,
-                    bounds persistence, restore adoption.
+                    height persistence, teardown. Owns the injected popout CSS.
 src/settings.ts     Settings interface, defaults, settings tab.
-styles.css          Readable reference + fallback for injected popout styles.
 ```
+
+There is no `styles.css` — all popout CSS lives in `injectPopoutStyles`
+(`window-manager.ts`).
 
 ## Dev / build workflow
 
@@ -104,7 +116,7 @@ npm run typecheck  # tsc -noEmit only — must pass clean
 
 Build output `main.js` is git-ignored. **Work only inside this repo** — do not
 write into any Obsidian vault from a session. The user copies the build outputs
-(`main.js`, `manifest.json`, `styles.css`) into their vault's
+(`main.js` + `manifest.json` — there is no `styles.css`) into their vault's
 `.obsidian/plugins/obsidian-sidecar-browser/` folder themselves and reloads the
 plugin in Obsidian (Cmd+P → "Reload app without saving", or toggle it off/on).
 
