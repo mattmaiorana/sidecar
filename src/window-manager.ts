@@ -169,9 +169,9 @@ export class SidecarWindowManager {
 		bar.dataset.sidecarBuild = SIDECAR_BUILD;
 		bar.createDiv({ cls: "sidecar-bar-spacer" });
 
-		// Only offer the pin if we can actually honor it — otherwise the button
-		// would toggle "active" while doing nothing (a lying UI).
-		if (this.alwaysOnTopSupported()) {
+		// Only offer the pin if the setting is on AND the Electron remote API is
+		// reachable — otherwise the button would toggle "active" while doing nothing.
+		if (this.plugin.settings.showPinButton && this.alwaysOnTopSupported()) {
 			const pinBtn = bar.createEl("button", {
 				cls: "sidecar-pin-btn clickable-icon",
 				attr: { "aria-label": "Keep window on top" },
