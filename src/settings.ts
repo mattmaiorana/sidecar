@@ -14,15 +14,12 @@ export interface WindowBounds {
 }
 
 export interface SidecarBrowserSettings {
-	/** Vault-relative path to the folder whose markdown files are listed. */
-	projectsFolder: string;
-	/** Last known popout window bounds, restored on next open. */
+	/** Last known popout window bounds; height is restored on next open. */
 	windowBounds: WindowBounds;
 }
 
 /** A tall, narrow column by default — the whole point of the plugin. */
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
-	projectsFolder: "Projects",
 	windowBounds: {
 		x: null,
 		y: null,
@@ -44,21 +41,8 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Projects folder")
-			.setDesc(
-				"Vault-relative path to the folder whose markdown files the Sidecar Browser lists. Example: Projects, or Areas/Work."
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder("Projects")
-					.setValue(this.plugin.settings.projectsFolder)
-					.onChange(async (value) => {
-						// Normalize: trim and strip leading/trailing slashes.
-						this.plugin.settings.projectsFolder = value
-							.trim()
-							.replace(/^\/+|\/+$/g, "");
-						await this.plugin.saveSettings();
-					})
-			);
+			.setName("Sidecar Browser")
+			.setHeading()
+			.setDesc("Opens notes in a tall, narrow popout window alongside your main Obsidian window.");
 	}
 }

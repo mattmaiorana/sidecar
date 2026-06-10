@@ -4,10 +4,6 @@ import {
 	SidecarBrowserSettings,
 	SidecarBrowserSettingTab,
 } from "./settings";
-import {
-	ProjectBrowserView,
-	VIEW_TYPE_SIDECAR_BROWSER,
-} from "./project-browser-view";
 import { SidecarWindowManager, SIDECAR_BUILD } from "./window-manager";
 
 export default class SidecarBrowserPlugin extends Plugin {
@@ -19,12 +15,6 @@ export default class SidecarBrowserPlugin extends Plugin {
 		console.info(`[Sidecar Browser] loaded — build ${SIDECAR_BUILD}`);
 
 		this.windowManager = new SidecarWindowManager(this);
-
-		// The folder-listing state of the single Sidecar leaf.
-		this.registerView(
-			VIEW_TYPE_SIDECAR_BROWSER,
-			(leaf) => new ProjectBrowserView(leaf, this)
-		);
 
 		// Primary entry point.
 		this.addCommand({
@@ -63,14 +53,6 @@ export default class SidecarBrowserPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("window-open", (win) => {
 				this.windowManager.handleWindowOpen(win);
-			})
-		);
-
-		// Keep our custom note title bar in sync if the file in the Sidecar leaf
-		// changes outside of our own click handler.
-		this.registerEvent(
-			this.app.workspace.on("file-open", () => {
-				this.windowManager.refreshNoteHeader();
 			})
 		);
 
@@ -123,8 +105,8 @@ export default class SidecarBrowserPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		const data = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
-		// windowBounds is a nested object — merge it explicitly so a partial
-		// saved blob can't drop the default width/height.
+		// windowBounds is nested — merge explicitly so a partial saved blob
+		// can't drop the default width/height.
 		this.settings.windowBounds = Object.assign(
 			{},
 			DEFAULT_SETTINGS.windowBounds,

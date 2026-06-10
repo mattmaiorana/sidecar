@@ -16,61 +16,55 @@ no syncing.
    creates a new popout leaf (`workspace.openPopoutLeaf(...)`) showing that note.
    Multiple Sidecars can be open simultaneously — `SidecarWindowManager` tracks
    all of them in a `Set<WorkspaceLeaf>`. The `ProjectBrowserView` (folder listing)
-   is parked for v1 but its code is kept; the leaf no longer swaps between states.
+   is deleted; its code is in git history. The leaf shows a `MarkdownView` only.
 
 2. **Never hand-roll an editor.** Editing uses the real `MarkdownView`
    (`leaf.openFile(file)`), so the user keeps live preview, their theme, and
    their other plugins. Do **not** embed a textarea or a standalone CodeMirror.
 
-3. **Entry points (v1):**
+3. **Entry points:**
    - Command "Open current note in Sidecar" / ribbon button → opens the active file.
    - Right-click `.md` file in file tree → "Open in Sidecar".
    - `panel-right` action button injected into every main-window `MarkdownView`
      toolbar (via `active-leaf-change`, guarded to skip popout leaves).
    All three call `windowManager.open(file)`, which always creates a fresh window.
 
-4. **Fully custom chrome, popout-scoped.** The window reads as "← All + title,
-   nothing else". Obsidian's native tab strip **and** per-view header are hidden
-   in the popout; we render our own `.sidecar-bar` instead, using `sidecar-*`
-   class names that other plugins (e.g. Simplified Layout) don't target — so the
-   Sidecar looks consistent regardless of global UI tweaks:
-   - In `ProjectBrowserView` we own the DOM and render the bar in `contentEl`
-     (root view: folder title only, no back control).
-   - In the `MarkdownView` state we inject the bar (`← All` + the note title) as
-     the first child of `view.containerEl` (`window-manager.decorateNoteHeader`,
-     kept in sync via the workspace `file-open` event). Returning to the list is
-     our own `All` button → `showBrowser`; we do **not** use `view.addAction` or
-     keep Obsidian's native back/forward.
-   - **All popout CSS is scoped to `body.sidecar-popout`.** We add that class
-     ourselves to the popout window's `<body>` (via the typed
-     `WorkspaceWindow.doc`), rather than relying on Obsidian's internal popout
-     class name. This *guarantees* the main window is never affected, and our
-     styles never leak out.
-   - **Drag region caveat (macOS):** Obsidian's popout is a frameless window
-     where the native tab strip (`.workspace-tab-header-container`) is the drag
-     region and reserves space for the traffic-light buttons. Because we hide
-     that strip, `styles.css` re-establishes dragging by setting
-     `-webkit-app-region: drag` on our headers plus a left inset for the traffic
-     lights (with interactive controls marked `no-drag`). This block is the most
-     environment-dependent part of the plugin — tune it if window dragging or
-     the traffic lights misbehave in a given OS/Obsidian build.
+4. **Minimal custom chrome, popout-scoped.** The Sidecar header is a narrow bar
+   containing only the macOS traffic-light drag inset and a pin button (always-on-top
+   toggle) at the right edge. Obsidian's native tab strip and per-view header are
+   hidden; the note's own inline title and content fill the rest. `sidecar-*` class
+   names are used so other plugins don't interfere.
+   - The bar (`decorateHeader`) is injected as the first child of `view.containerEl`.
+   - **All popout CSS is injected directly into the popout's `<head>`** (see
+     `injectPopoutStyles` in `window-manager.ts`) so it is immune to Obsidian
+     wiping body classes. The `body.sidecar-popout` class is still added for
+     debug/inspection, and `styles.css` mirrors the same rules as a readable
+     reference and fallback.
+   - **Drag region (macOS):** `-webkit-app-region: drag` on `.sidecar-bar` with
+     left inset for traffic lights. Interactive controls are marked `no-drag`.
 
-5. **Bounds persistence + sticky width.** Default to a tall, narrow column
-   (`DEFAULT_SETTINGS.windowBounds` = 375×1000). **Width always resets to the
-   default on open**; height and position restore from the last session. A
-   sticky detent (`snapWidthToDefault`) snaps the window back to exactly the
-   default when resized within `WIDTH_SNAP_PX` of it (via `win.resizeTo`). We
-   capture live geometry (`win.screenX/screenY/outerWidth/outerHeight`) on
-   `resize` (debounced), `blur`, `beforeunload`, and the workspace
-   `window-close` event. There is no DOM "move" event, which is why `blur`/
-   `close` catch repositioning.
+5. **Bounds persistence.** Default to a tall, narrow column
+   (`DEFAULT_SETTINGS.windowBounds` = 375×1000). **Width always resets to
+   `DEFAULT_WIDTH` on open** (because `openPopoutLeaf`'s `size.width` parameter
+   is silently ignored by Obsidian — width is forced via `win.resizeTo` in
+   `handleWindowOpen`). Height is saved/restored. Position is always computed
+   fresh from the main window's live geometry (right edge +40px, top −40px) —
+   saved position is never used for placement. Geometry is captured on `resize`
+   (debounced 300ms), `blur`, `beforeunload`, and `window-close`.
 
-6. **Restored popouts are adopted.** On reload Obsidian restores the popout +
-   its list view *directly*, bypassing `open()` — so the view self-marks the
-   body class on render (`markPopout`), and `adoptRestoredSidecar()` (on
-   `onLayoutReady`) re-attaches bounds tracking and resets the width. Without
-   this, a restored window is unmanaged: native chrome shows and width/sticky
-   don't work.
+6. **Restored popouts are adopted.** On reload, `adoptRestoredSidecar()` (called
+   on `onLayoutReady`) finds all markdown leaves in popout windows and re-attaches
+   styles, header, and bounds tracking. Without this a restored window is
+   unmanaged: native chrome shows, no header, no bounds tracking. Note: this
+   approach adopts *all* markdown popouts, not only Sidecars — see FUTURE_PLANS
+   for a fingerprinting approach if that becomes a problem.
+
+7. **Always-on-top (pin button).** The pin button in the header calls
+   `setAlwaysOnTop(popoutWin, pinned)` which injects a `<script>` into the popout
+   document to call `require('@electron/remote').getCurrentWindow().setAlwaysOnTop()`
+   (with a fallback to `require('electron').remote`). The script-injection pattern
+   is necessary so `getCurrentWindow()` resolves to the popout's BrowserWindow
+   rather than the main window's. Pin state is in-memory only (not persisted).
 
 ## API correctness
 
@@ -81,28 +75,23 @@ names. Key APIs this plugin depends on:
 
 - `Workspace.openPopoutLeaf(data?: WorkspaceWindowInitData): WorkspaceLeaf`
   (`WorkspaceWindowInitData = { x?, y?, size?: { width, height } }`)
+  **Note:** `size.width` is silently ignored by Obsidian's implementation.
 - `WorkspaceLeaf.getContainer(): WorkspaceContainer` → `instanceof WorkspaceWindow`
   gives `.win: Window` and `.doc: Document`.
-- `WorkspaceLeaf.setViewState(...)`, `WorkspaceLeaf.openFile(file, openState?)`,
-  `WorkspaceLeaf.detach()`.
-- `View.containerEl` (we inject our bar here) and `View.getDisplayText()` (title);
-  `setIcon(parent, iconId)` for the chevron/list icons.
-- `Plugin.registerView`, `registerDomEvent` (has a `Window` overload),
-  `registerEvent`; `workspace.on('window-close', ...)`, `workspace.on('file-open', ...)`.
-- Vault: `getAbstractFileByPath`, `getRoot()`, `TFolder.children`, `TFile`,
-  and `vault.on('create' | 'delete' | 'rename', ...)` to keep the list live.
+- `WorkspaceLeaf.openFile(file, openState?)`, `WorkspaceLeaf.detach()`.
+- `View.containerEl` (we inject our bar here); `setIcon(parent, iconId)`.
+- `Plugin.registerDomEvent` (has a `Window` overload), `registerEvent`;
+  `workspace.on('window-close', ...)`, `workspace.on('window-open', ...)`.
 
 ## File layout
 
 ```
-manifest.json            plugin metadata (id, isDesktopOnly)
-src/main.ts              Plugin entry: load settings, register view, command,
-                         ribbon, settings tab, window-close handler.
-src/window-manager.ts    Owns the popout + its one leaf: open, leaf swap, back
-                         action, popout body class, bounds persistence.
-src/project-browser-view.ts   The folder-listing ItemView + its custom header.
-src/settings.ts          Settings interface, defaults, settings tab.
-styles.css               Popout-scoped chrome hiding + browser-view styling.
+manifest.json       plugin metadata (id, isDesktopOnly)
+src/main.ts         Plugin entry: load settings, commands, ribbon, event wiring.
+src/window-manager.ts  Manages all popout windows: open, mark, header, pin,
+                    bounds persistence, restore adoption.
+src/settings.ts     Settings interface, defaults, settings tab.
+styles.css          Readable reference + fallback for injected popout styles.
 ```
 
 ## Dev / build workflow
@@ -121,8 +110,8 @@ plugin in Obsidian (Cmd+P → "Reload app without saving", or toggle it off/on).
 
 ## Conventions
 
-- Keep concerns in separate files (view / window management / settings); don't
-  let `main.ts` grow into a monolith.
+- Keep concerns in separate files (window management / settings); don't let
+  `main.ts` grow into a monolith.
 - Tabs for indentation (matches the Obsidian sample-plugin house style).
 - Typecheck must stay clean.
 - Make small, logical commits.
@@ -134,6 +123,6 @@ plugin in Obsidian (Cmd+P → "Reload app without saving", or toggle it off/on).
 
 ## Out of scope (see FUTURE_PLANS.md)
 
-Search/filter, nested subfolder navigation, per-project last-opened memory, OS
-window snapping, mobile, multiple simultaneous Sidecar windows. Don't build these
+Folder browser view, internal-link→Sidecar opener, snap width, pin persistence,
+search/filter, nested folders, OS window snapping, mobile. Don't build these
 without a deliberate decision to expand scope.
