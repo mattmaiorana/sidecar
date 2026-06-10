@@ -1,4 +1,4 @@
-# CLAUDE.md — Sidecar Browser
+# CLAUDE.md — Sidecar Window
 
 Context for future Claude Code sessions. Read this before changing anything so
 you don't re-derive decisions that are already locked.

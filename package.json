@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-sidecar-browser",
+	"name": "obsidian-sidecar-window",
 	"version": "1.0.0",
 	"description": "Opens a tall, narrow popout window that acts as a portable mini-Obsidian for navigating and editing project notes, while the main app stays untouched.",
 	"main": "main.js",

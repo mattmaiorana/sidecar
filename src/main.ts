@@ -12,7 +12,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
-		console.info(`[Sidecar Browser] loaded — build ${SIDECAR_BUILD}`);
+		console.info(`[Sidecar Window] loaded — build ${SIDECAR_BUILD}`);
 
 		this.windowManager = new SidecarWindowManager(this);
 

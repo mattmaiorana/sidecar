@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Sidecar Browser are documented here.
+All notable changes to Sidecar Window are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [1.0.0]

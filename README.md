@@ -1,4 +1,4 @@
-# Sidecar Browser
+# Sidecar Window
 
 An Obsidian plugin that opens a note in a **tall, narrow popout window** — a
 portable mini-Obsidian you can park next to your web browser — while the main
@@ -30,10 +30,10 @@ This plugin isn't in the community store. To run it from source:
 
 1. Build it (see [Development](#development)) so `main.js` exists.
 2. Copy `main.js` and `manifest.json` into your vault at:
-   `<your vault>/.obsidian/plugins/obsidian-sidecar-browser/`
+   `<your vault>/.obsidian/plugins/obsidian-sidecar-window/`
    (there is no `styles.css` — all styling is injected at runtime).
 3. In Obsidian: **Settings → Community plugins**, make sure *Restricted mode* is
-   off, then enable **Sidecar Browser**.
+   off, then enable **Sidecar Window**.
 
 ## Use
 
