@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "v1-multi-1";
+export const SIDECAR_BUILD = "v1-handle-1";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -35,8 +35,6 @@ export class SidecarWindowManager {
 	private boundsAttached = new Set<WorkspaceLeaf>();
 	/** Docs that already have a MutationObserver watching the body class. */
 	private observedDocs = new WeakSet<Document>();
-	/** Windows currently mid-snap; suppress re-entry until the resize settles. */
-	private snapping = new Set<Window>();
 
 	constructor(plugin: SidecarBrowserPlugin) {
 		this.plugin = plugin;
@@ -258,16 +256,68 @@ export class SidecarWindowManager {
 		}
 	}
 
-	/** Attach resize/bounds listeners to the popout once it's available. Guarded
-	 *  per-leaf so the retried setup (schedulePopoutSetup) only wires once. */
+	/**
+	 * Attach the custom resize handle and bounds listeners once the popout win
+	 * is available. Guarded per-leaf so schedulePopoutSetup retries are no-ops.
+	 *
+	 * The custom handle uses pointer capture (like a browser extension drag
+	 * handle) so the snap math runs proactively — desired width is computed
+	 * before any resizeTo call, eliminating the OS-resize feedback loop that
+	 * caused the beachball with the previous reactive approach. resizeTo is
+	 * throttled to one call per animation frame. Native OS resize still works
+	 * for basic resizing; it just saves bounds without snapping.
+	 */
 	private ensureBoundsAttached(leaf: WorkspaceLeaf): void {
 		if (this.boundsAttached.has(leaf)) return;
 		const win = this.getPopoutWin(leaf);
 		if (!win) return;
 		this.boundsAttached.add(leaf);
 
+		// --- Custom resize handle (right edge) --------------------------------
+		const handle = win.document.createElement("div");
+		handle.className = "sidecar-resize-handle";
+		win.document.body.appendChild(handle);
+
+		let dragStartX = 0;
+		let dragStartWidth = 0;
+		let dragging = false;
+		let latestX = 0;
+		let raf: number | null = null;
+
+		handle.addEventListener("pointerdown", (e) => {
+			e.preventDefault();
+			dragStartX = e.screenX;
+			dragStartWidth = win.outerWidth;
+			latestX = e.screenX;
+			dragging = true;
+			handle.setPointerCapture(e.pointerId);
+		});
+
+		handle.addEventListener("pointermove", (e) => {
+			if (!dragging) return;
+			latestX = e.screenX;
+			if (raf !== null) return; // already scheduled this frame
+			raf = win.requestAnimationFrame(() => {
+				raf = null;
+				let w = dragStartWidth + (latestX - dragStartX);
+				if (Math.abs(w - DEFAULT_WIDTH) <= WIDTH_SNAP_PX) w = DEFAULT_WIDTH;
+				w = Math.max(200, Math.min(800, Math.round(w)));
+				win.resizeTo(w, win.outerHeight);
+			});
+		});
+
+		const endDrag = (e: PointerEvent) => {
+			if (!dragging) return;
+			dragging = false;
+			if (raf !== null) { win.cancelAnimationFrame(raf); raf = null; }
+			try { handle.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+			this.captureBounds(leaf);
+		};
+		handle.addEventListener("pointerup", endDrag);
+		handle.addEventListener("pointercancel", endDrag);
+
+		// --- Native OS resize: just persist bounds (no reactive snap) ---------
 		this.plugin.registerDomEvent(win, "resize", () => {
-			this.snapWidthToDefault(win);
 			const existing = this.saveTimers.get(leaf);
 			if (existing !== undefined) win.clearTimeout(existing);
 			this.saveTimers.set(
@@ -283,20 +333,6 @@ export class SidecarWindowManager {
 		this.plugin.registerDomEvent(win, "beforeunload", () =>
 			this.captureBounds(leaf)
 		);
-	}
-
-	/** Magnetic detent: snap to the default width when within WIDTH_SNAP_PX.
-	 *  Guarded against re-entry: once resizeTo fires we ignore further resize
-	 *  events for 200 ms so queued Electron window-resize ops can't pile up. */
-	private snapWidthToDefault(win: Window): void {
-		if (this.snapping.has(win)) return;
-		const width = win.outerWidth;
-		if (width === DEFAULT_WIDTH) return;
-		if (Math.abs(width - DEFAULT_WIDTH) <= WIDTH_SNAP_PX) {
-			this.snapping.add(win);
-			win.resizeTo(DEFAULT_WIDTH, win.outerHeight);
-			win.setTimeout(() => this.snapping.delete(win), 200);
-		}
 	}
 
 	/** Read the live window geometry and persist it to settings. */

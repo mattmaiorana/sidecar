@@ -181,3 +181,19 @@ body.sidecar-popout .inline-title {
 	font-size: var(--font-ui-small);
 	line-height: 1.5;
 }
+
+/* ----- Custom resize handle (right edge) --------------------------------- */
+
+/* Transparent grip injected at body level so it always covers the right edge
+   regardless of scroll. Pointer-event-based snapping keeps resizeTo calls
+   proactive (no OS-resize feedback loop). */
+body.sidecar-popout .sidecar-resize-handle {
+	position: fixed;
+	top: 0;
+	right: 0;
+	width: 8px;
+	height: 100%;
+	cursor: ew-resize;
+	z-index: 9999;
+	-webkit-app-region: no-drag;
+}
