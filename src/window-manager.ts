@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "v1-inject-1";
+export const SIDECAR_BUILD = "v1-inject-6";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -48,31 +48,43 @@ export class SidecarWindowManager {
 	 */
 	async open(file: TFile): Promise<void> {
 		const bounds = this.plugin.settings.windowBounds;
+		const pos = this.computeOpenPosition();
 		this.pendingPopout = true;
 		const leaf = this.app.workspace.openPopoutLeaf({
 			size: { width: DEFAULT_WIDTH, height: bounds.height },
-			...(bounds.x !== null && bounds.y !== null
-				? { x: bounds.x, y: bounds.y }
-				: {}),
+			x: pos.x,
+			y: pos.y,
 		});
 		this.leaves.add(leaf);
 
 		await leaf.openFile(file, { active: true });
 		this.decorateNoteHeader(leaf);
 		await this.app.workspace.revealLeaf(leaf);
-		this.pendingPopout = false;
 
-		this.schedulePopoutSetup(leaf);
+		this.pendingPopout = false;
+		this.schedulePopoutSetup(leaf, true);
 	}
 
 	/**
 	 * Idempotently mark the popout and attach bounds tracking, re-applied over a
 	 * few ticks so the body class survives Obsidian's own late popout setup.
+	 *
+	 * When `reposition` is true (fresh opens via open()) each tick also re-applies
+	 * moveTo so we win the race against Obsidian's own late internal positioning.
+	 * For adopted/restored popouts this is skipped.
 	 */
-	private schedulePopoutSetup(leaf: WorkspaceLeaf): void {
+	private schedulePopoutSetup(leaf: WorkspaceLeaf, reposition = false): void {
 		const setup = () => {
 			if (!this.leaves.has(leaf)) return;
 			this.markLeafPopout(leaf);
+			if (reposition) {
+				const doc = this.popoutDocFor(leaf);
+				const win = doc?.defaultView;
+				if (win) {
+					const pos = this.computeOpenPosition();
+					win.moveTo(pos.x, pos.y);
+				}
+			}
 			this.ensureBoundsAttached(leaf);
 		};
 		setup();
@@ -89,6 +101,11 @@ export class SidecarWindowManager {
 	handleWindowOpen(win: WorkspaceWindow): void {
 		if (!this.pendingPopout) return;
 		this.pendingPopout = false;
+		const bounds = this.plugin.settings.windowBounds;
+		const pos = this.computeOpenPosition();
+		const h = win.win.outerHeight > 50 ? win.win.outerHeight : bounds.height;
+		win.win.resizeTo(DEFAULT_WIDTH, h);
+		win.win.moveTo(pos.x, pos.y);
 		this.applyPopoutMarks(win.doc);
 	}
 
@@ -405,6 +422,16 @@ export class SidecarWindowManager {
 		this.plugin.registerDomEvent(win, "beforeunload", () =>
 			this.captureBounds(leaf)
 		);
+	}
+
+	/** Position the sidecar 40px above and 40px to the right of the main
+	 *  window's top-right corner. Always computed fresh from the live main
+	 *  window geometry so it follows the main window wherever it is on screen. */
+	private computeOpenPosition(): { x: number; y: number } {
+		return {
+			x: window.screenX + window.outerWidth - DEFAULT_WIDTH + 40,
+			y: window.screenY - 40,
+		};
 	}
 
 	/** Read the live window geometry and persist it to settings. */
