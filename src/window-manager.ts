@@ -33,6 +33,10 @@ export class SidecarWindowManager {
 	private pendingPopout = false;
 	/** Leaves whose resize/bounds listeners are already attached. */
 	private boundsAttached = new Set<WorkspaceLeaf>();
+	/** Docs that already have a MutationObserver watching the body class. */
+	private observedDocs = new WeakSet<Document>();
+	/** Windows currently mid-snap; suppress re-entry until the resize settles. */
+	private snapping = new Set<Window>();
 
 	constructor(plugin: SidecarBrowserPlugin) {
 		this.plugin = plugin;
@@ -236,19 +240,22 @@ export class SidecarWindowManager {
 	}
 
 	/** Add the scoping class + a visible build stamp to a popout document.
-	 *  A MutationObserver watches for Obsidian wiping the class during its own
-	 *  window initialization and immediately re-adds it. */
+	 *  Attaches a permanent MutationObserver (one per document) that re-adds the
+	 *  class any time Obsidian wipes it — including on focus/blur transitions.
+	 *  The observer lives for the window's lifetime; no explicit cleanup needed. */
 	private applyPopoutMarks(doc: Document): void {
 		doc.body.classList.add(POPOUT_BODY_CLASS);
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
 
-		const observer = new MutationObserver(() => {
-			if (!doc.body.classList.contains(POPOUT_BODY_CLASS)) {
-				doc.body.classList.add(POPOUT_BODY_CLASS);
-			}
-		});
-		observer.observe(doc.body, { attributes: true, attributeFilter: ["class"] });
-		doc.defaultView?.setTimeout(() => observer.disconnect(), 3000);
+		if (!this.observedDocs.has(doc)) {
+			this.observedDocs.add(doc);
+			const observer = new MutationObserver(() => {
+				if (!doc.body.classList.contains(POPOUT_BODY_CLASS)) {
+					doc.body.classList.add(POPOUT_BODY_CLASS);
+				}
+			});
+			observer.observe(doc.body, { attributes: true, attributeFilter: ["class"] });
+		}
 	}
 
 	/** Attach resize/bounds listeners to the popout once it's available. Guarded
@@ -278,12 +285,17 @@ export class SidecarWindowManager {
 		);
 	}
 
-	/** Magnetic detent: snap to the default width when within WIDTH_SNAP_PX. */
+	/** Magnetic detent: snap to the default width when within WIDTH_SNAP_PX.
+	 *  Guarded against re-entry: once resizeTo fires we ignore further resize
+	 *  events for 200 ms so queued Electron window-resize ops can't pile up. */
 	private snapWidthToDefault(win: Window): void {
+		if (this.snapping.has(win)) return;
 		const width = win.outerWidth;
 		if (width === DEFAULT_WIDTH) return;
 		if (Math.abs(width - DEFAULT_WIDTH) <= WIDTH_SNAP_PX) {
+			this.snapping.add(win);
 			win.resizeTo(DEFAULT_WIDTH, win.outerHeight);
+			win.setTimeout(() => this.snapping.delete(win), 200);
 		}
 	}
 
