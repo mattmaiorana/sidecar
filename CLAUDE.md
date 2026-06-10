@@ -12,22 +12,22 @@ no syncing.
 
 ## Locked architecture decisions — do not re-derive
 
-1. **One popout window, one leaf, swapped contents.** We open a single popout
-   leaf (`workspace.openPopoutLeaf(...)`, the `'window'` leaf type) and alternate
-   that *same* leaf between two states:
-   - the custom **`ProjectBrowserView`** (folder listing), and
-   - a normal **`MarkdownView`** opened on a selected file.
-   We never open a second Sidecar window or a second leaf.
+1. **Multiple independent popout windows.** Each call to `windowManager.open(file)`
+   creates a new popout leaf (`workspace.openPopoutLeaf(...)`) showing that note.
+   Multiple Sidecars can be open simultaneously — `SidecarWindowManager` tracks
+   all of them in a `Set<WorkspaceLeaf>`. The `ProjectBrowserView` (folder listing)
+   is parked for v1 but its code is kept; the leaf no longer swaps between states.
 
 2. **Never hand-roll an editor.** Editing uses the real `MarkdownView`
    (`leaf.openFile(file)`), so the user keeps live preview, their theme, and
    their other plugins. Do **not** embed a textarea or a standalone CodeMirror.
 
-3. **Navigation / leaf swap:**
-   - Open → `leaf.setViewState({ type: VIEW_TYPE_SIDECAR_BROWSER })` shows the list.
-   - Click a file → `windowManager.openFileInSidecar(leaf, file)` →
-     `leaf.openFile(file)` swaps the same leaf to a `MarkdownView`.
-   - Back arrow → `setViewState(...)` swaps back to the list.
+3. **Entry points (v1):**
+   - Command "Open current note in Sidecar" / ribbon button → opens the active file.
+   - Right-click `.md` file in file tree → "Open in Sidecar".
+   - `panel-right` action button injected into every main-window `MarkdownView`
+     toolbar (via `active-leaf-change`, guarded to skip popout leaves).
+   All three call `windowManager.open(file)`, which always creates a fresh window.
 
 4. **Fully custom chrome, popout-scoped.** The window reads as "← All + title,
    nothing else". Obsidian's native tab strip **and** per-view header are hidden

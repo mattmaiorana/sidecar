@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, WindowBounds } from "./settings";
 const POPOUT_BODY_CLASS = "sidecar-popout";
 /** Bump on each iteration so we can confirm, in the popout's own inspector
  *  (body[data-sidecar-build] / the bar's data attr), which build is live. */
-export const SIDECAR_BUILD = "v1-note-1";
+export const SIDECAR_BUILD = "v1-multi-1";
 /** The width we always open at, and the detent the window snaps back to. */
 const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 /** Resizing to within this many px of DEFAULT_WIDTH snaps back to it exactly,
@@ -16,26 +16,23 @@ const DEFAULT_WIDTH = DEFAULT_SETTINGS.windowBounds.width;
 const WIDTH_SNAP_PX = 30;
 
 /**
- * Owns the single Sidecar popout window and its one leaf.
+ * Manages all open Sidecar popout windows.
  *
- * The leaf alternates between two states in place:
- *   - the {@link ProjectBrowserView} folder listing, and
- *   - a real {@link MarkdownView} opened on a selected file.
- *
- * It also opens the window at, and persists, the saved bounds, and applies the
- * popout-scoped body class used by the chrome-hiding CSS.
+ * Each call to `open(file)` creates a new independent popout leaf showing that
+ * note. Multiple Sidecars can be open simultaneously. Each window is fully
+ * styled, bounds-tracked, and width-snapping independently.
  */
 export class SidecarWindowManager {
 	private plugin: SidecarBrowserPlugin;
-	/** The single leaf living inside the popout, while the window is open. */
-	private leaf: WorkspaceLeaf | null = null;
-	/** Debounce handle for size persistence. */
-	private saveBoundsTimer: number | null = null;
+	/** All leaves currently living inside open Sidecar popouts. */
+	private leaves = new Set<WorkspaceLeaf>();
+	/** Per-leaf debounce handles for bounds persistence. */
+	private saveTimers = new Map<WorkspaceLeaf, number>();
 	/** True between requesting a popout and its window-open event firing, so we
 	 *  mark exactly the window we just opened (not the user's other popouts). */
 	private pendingPopout = false;
-	/** Whether resize/bounds listeners are attached to the current window. */
-	private boundsAttached = false;
+	/** Leaves whose resize/bounds listeners are already attached. */
+	private boundsAttached = new Set<WorkspaceLeaf>();
 
 	constructor(plugin: SidecarBrowserPlugin) {
 		this.plugin = plugin;
@@ -46,12 +43,10 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Open the Sidecar popout fresh (closing any existing one) and show
-	 * `file` at the default width.
+	 * Open a new Sidecar popout showing `file`. Each call creates an independent
+	 * window — existing Sidecars are left untouched.
 	 */
 	async open(file: TFile): Promise<void> {
-		this.close();
-
 		const bounds = this.plugin.settings.windowBounds;
 		this.pendingPopout = true;
 		const leaf = this.app.workspace.openPopoutLeaf({
@@ -60,7 +55,7 @@ export class SidecarWindowManager {
 				? { x: bounds.x, y: bounds.y }
 				: {}),
 		});
-		this.leaf = leaf;
+		this.leaves.add(leaf);
 
 		await leaf.openFile(file, { active: true });
 		this.decorateNoteHeader(leaf);
@@ -76,7 +71,7 @@ export class SidecarWindowManager {
 	 */
 	private schedulePopoutSetup(leaf: WorkspaceLeaf): void {
 		const setup = () => {
-			if (this.leaf !== leaf) return;
+			if (!this.leaves.has(leaf)) return;
 			this.markLeafPopout(leaf);
 			this.ensureBoundsAttached(leaf);
 		};
@@ -98,29 +93,24 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * After an Obsidian reload, the popout and its list view are restored
-	 * directly by the workspace, bypassing open(). Adopt that restored Sidecar
-	 * leaf so it's managed like one we opened: marked for the scoped CSS,
-	 * bounds-tracked, and reset to the default width. (Called on layout-ready.)
+	 * After an Obsidian reload, popouts and their views are restored directly by
+	 * the workspace, bypassing open(). Adopt all restored Sidecar leaves so they
+	 * are managed like ones we opened. (Called on layout-ready.)
 	 */
 	adoptRestoredSidecar(): void {
-		if (this.leaf && this.getPopoutWin(this.leaf)) return;
-
 		const restored = this.app.workspace
 			.getLeavesOfType(VIEW_TYPE_SIDECAR_BROWSER)
-			.find((leaf) => this.getPopoutWin(leaf));
-		if (!restored) return;
+			.filter((leaf) => this.getPopoutWin(leaf) && !this.leaves.has(leaf));
 
-		this.leaf = restored;
-		this.schedulePopoutSetup(restored);
-
-		// Best-effort width reset on a restored window (runtime resize may be a
-		// no-op in the popout; reopening via the command always resets it).
-		const win = this.getPopoutWin(restored);
-		if (win) win.resizeTo(DEFAULT_WIDTH, win.outerHeight);
+		for (const leaf of restored) {
+			this.leaves.add(leaf);
+			this.schedulePopoutSetup(leaf);
+			const win = this.getPopoutWin(leaf);
+			if (win) win.resizeTo(DEFAULT_WIDTH, win.outerHeight);
+		}
 	}
 
-	/** Swap the leaf to the folder-listing state. Used on open and on "back". */
+	/** Swap a leaf to the folder-listing state (dormant v1; kept for restore path). */
 	async showBrowser(leaf: WorkspaceLeaf): Promise<void> {
 		await leaf.setViewState({
 			type: VIEW_TYPE_SIDECAR_BROWSER,
@@ -130,8 +120,8 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Swap the leaf to a real MarkdownView on `file`, then inject our own
-	 * "← All" title bar (Obsidian's native header is hidden in the popout).
+	 * Swap a leaf to a real MarkdownView on `file` (used by the dormant
+	 * ProjectBrowserView click handler).
 	 */
 	async openFileInSidecar(leaf: WorkspaceLeaf, file: TFile): Promise<void> {
 		await leaf.openFile(file, { active: true });
@@ -139,54 +129,56 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Keep the note title bar in sync when the file in our leaf changes through
-	 * some path other than openFileInSidecar (wired to the workspace
-	 * `file-open` event). No-op while the list is showing.
+	 * Keep note title bars in sync when a file opens in any of our leaves
+	 * (wired to the workspace `file-open` event). No-ops on list-view leaves.
 	 */
 	refreshNoteHeader(): void {
-		if (!this.leaf || !this.getPopoutWindow(this.leaf)) return;
-		if (this.leaf.view.getViewType() === VIEW_TYPE_SIDECAR_BROWSER) return;
-		this.decorateNoteHeader(this.leaf);
+		for (const leaf of this.leaves) {
+			if (!this.getPopoutWindow(leaf)) continue;
+			if (leaf.view.getViewType() === VIEW_TYPE_SIDECAR_BROWSER) continue;
+			this.decorateNoteHeader(leaf);
+		}
 	}
 
-	/** Close the popout window if it is open (used by a command / on demand). */
+	/** Close all open Sidecar windows (used on plugin unload / a close-all command). */
 	close(): void {
-		if (this.leaf) {
-			this.captureBounds(this.leaf);
-			this.leaf.detach();
-			this.leaf = null;
+		for (const leaf of this.leaves) {
+			this.captureBounds(leaf);
+			leaf.detach();
 		}
-		this.boundsAttached = false;
+		this.leaves.clear();
+		this.boundsAttached.clear();
+		this.saveTimers.clear();
 	}
 
 	/**
-	 * React to the popout being closed by the user (window-close event). Saves
-	 * final bounds and drops our reference so the next open() makes a fresh one.
+	 * React to a specific popout being closed by the user (window-close event).
+	 * Saves final bounds and removes that leaf from the managed set.
 	 */
 	handleWindowClose(win: WorkspaceWindow): void {
-		if (!this.leaf) return;
-		if (this.getPopoutWindow(this.leaf) !== win) return;
-		this.captureBounds(this.leaf);
-		this.leaf = null;
-		this.boundsAttached = false;
+		for (const leaf of this.leaves) {
+			if (this.getPopoutWindow(leaf) !== win) continue;
+			this.captureBounds(leaf);
+			this.leaves.delete(leaf);
+			this.boundsAttached.delete(leaf);
+			this.saveTimers.delete(leaf);
+			break;
+		}
 	}
 
 	/** Best-effort save on plugin unload. */
 	saveBoundsNow(): void {
-		if (this.leaf) this.captureBounds(this.leaf);
+		for (const leaf of this.leaves) this.captureBounds(leaf);
 	}
 
 	// --- custom note title bar --------------------------------------------
 
 	/**
-	 * Create (or update) our "← All  |  <title>" bar as the first child of the
-	 * note view's container. Idempotent: a repeated open of the same view just
-	 * refreshes the title. The bar is destroyed automatically when the leaf is
-	 * swapped back to the list (the MarkdownView's container is torn down).
+	 * Create (or update) our title bar as the first child of the note view's
+	 * container. Idempotent: repeated opens refresh the title in place. The bar
+	 * is destroyed automatically when the leaf's MarkdownView is torn down.
 	 */
 	private decorateNoteHeader(leaf: WorkspaceLeaf): void {
-		// Self-heal the body class on note renders too, so the bar's CSS applies
-		// even if the list state was never shown first.
 		this.markLeafPopout(leaf);
 
 		const view = leaf.view;
@@ -218,12 +210,9 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * The popout window's document for this leaf. Prefer the container API
-	 * (`getContainer()` → WorkspaceWindow), which is reliable whenever the
-	 * window already exists — i.e. on reveal, restore, and any render. Fall back
-	 * to the view element's ownerDocument only for the brief moment right after
-	 * openPopoutLeaf() before the container is wired up. `document` is the main
-	 * window's, so the inequality identifies a separate popout document.
+	 * The popout window's document for this leaf. Prefers the container API
+	 * (reliable once the window exists); falls back to ownerDocument for the
+	 * brief moment right after openPopoutLeaf() before the container is wired.
 	 */
 	private popoutDocFor(leaf: WorkspaceLeaf): Document | null {
 		const container = leaf.getContainer();
@@ -238,9 +227,8 @@ export class SidecarWindowManager {
 
 	/**
 	 * Add the scoping class + build stamp to this leaf's popout window. Public
-	 * so the browser view can self-mark on render — that path covers a view
-	 * Obsidian restored on startup, which never goes through showBrowser.
-	 * Idempotent; safe to call on every render.
+	 * so the browser view can self-mark on render. Idempotent; safe to call on
+	 * every render.
 	 */
 	markLeafPopout(leaf: WorkspaceLeaf): void {
 		const doc = this.popoutDocFor(leaf);
@@ -259,43 +247,38 @@ export class SidecarWindowManager {
 				doc.body.classList.add(POPOUT_BODY_CLASS);
 			}
 		});
-		observer.observe(doc.body, { attributes: true, attributeFilter: ['class'] });
+		observer.observe(doc.body, { attributes: true, attributeFilter: ["class"] });
 		doc.defaultView?.setTimeout(() => observer.disconnect(), 3000);
 	}
 
 	/** Attach resize/bounds listeners to the popout once it's available. Guarded
-	 *  so the retried setup (schedulePopoutSetup) only wires them up a single
-	 *  time. */
+	 *  per-leaf so the retried setup (schedulePopoutSetup) only wires once. */
 	private ensureBoundsAttached(leaf: WorkspaceLeaf): void {
-		if (this.boundsAttached) return;
+		if (this.boundsAttached.has(leaf)) return;
 		const win = this.getPopoutWin(leaf);
 		if (!win) return;
-		this.boundsAttached = true;
+		this.boundsAttached.add(leaf);
 
 		this.plugin.registerDomEvent(win, "resize", () => {
-			// Live magnetic snap: jump to the default the instant the width
-			// enters the detent zone while dragging, so it "clicks" into place.
 			this.snapWidthToDefault(win);
-			// Persist the (possibly snapped) geometry, debounced.
-			if (this.saveBoundsTimer !== null) win.clearTimeout(this.saveBoundsTimer);
-			this.saveBoundsTimer = win.setTimeout(() => {
-				this.captureBounds(leaf);
-				this.saveBoundsTimer = null;
-			}, 300);
+			const existing = this.saveTimers.get(leaf);
+			if (existing !== undefined) win.clearTimeout(existing);
+			this.saveTimers.set(
+				leaf,
+				win.setTimeout(() => {
+					this.captureBounds(leaf);
+					this.saveTimers.delete(leaf);
+				}, 300)
+			);
 		});
 
-		// There is no DOM "move" event; capture position when the window loses
-		// focus (covers the user dragging it elsewhere) and before it unloads.
 		this.plugin.registerDomEvent(win, "blur", () => this.captureBounds(leaf));
 		this.plugin.registerDomEvent(win, "beforeunload", () =>
 			this.captureBounds(leaf)
 		);
 	}
 
-	/** Magnetic detent: if the live width is within WIDTH_SNAP_PX of the
-	 *  default, jump to exactly the default. Resizing further than that away
-	 *  leaves the chosen width alone. Re-calling at the default is a no-op, so
-	 *  the resize this triggers settles immediately (no loop). */
+	/** Magnetic detent: snap to the default width when within WIDTH_SNAP_PX. */
 	private snapWidthToDefault(win: Window): void {
 		const width = win.outerWidth;
 		if (width === DEFAULT_WIDTH) return;
@@ -309,7 +292,6 @@ export class SidecarWindowManager {
 		const win = this.getPopoutWin(leaf);
 		if (!win) return;
 
-		// Guard against transient 0/garbage values while the window settles.
 		if (win.outerWidth < 50 || win.outerHeight < 50) return;
 
 		const bounds: WindowBounds = {
