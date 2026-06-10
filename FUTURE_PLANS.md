@@ -1,7 +1,7 @@
 # Future plans
 
-Deliberately parked items — **out of scope for v1**, captured here so they're
-not lost. Don't build these without a conscious decision to expand scope.
+Deliberately parked items — captured here so they're not lost. Don't build
+these without a conscious decision to expand scope.
 
 ---
 
@@ -78,10 +78,10 @@ To re-add it safely it must only touch *our* windows. Approaches:
 - **Pinning / last-opened memory per project** — remember the last note opened.
 - **OS window snapping** — snap to a screen edge or preset half-width position.
 - **Mobile support** — popout windows are desktop-only (`isDesktopOnly: true`).
-- **Multiple simultaneous Sidecar windows** — already implemented; this note is
-  kept in case the model needs revisiting.
-- **Folder picker in settings** — dropdown instead of text path.
-- **Note metadata in list rows** — modified time, tags.
-- **New note in folder** — affordance from the browser header.
-- **Keyboard navigation of the list** — arrow keys + enter.
 - **Configurable default window size** in settings.
+- **Folder picker in settings** — dropdown instead of text path (only relevant
+  if a folder setting is re-introduced).
+- The following items are contingent on the folder-browser view being restored:
+  search/filter, nested subfolder navigation, note metadata in list rows (modified
+  time, tags), new-note affordance in the browser header, keyboard navigation of
+  the list (arrow keys + enter), per-project last-opened memory.

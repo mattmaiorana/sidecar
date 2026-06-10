@@ -57,7 +57,7 @@ npm run typecheck  # type-check only
 
 The build output is `main.js` in the repo root (git-ignored). For live testing,
 copy `main.js` and `manifest.json` into your vault's
-`.obsidian/plugins/obsidian-sidecar-browser/` folder and reload the plugin in
+`.obsidian/plugins/obsidian-sidecar-window/` folder and reload the plugin in
 Obsidian (Cmd+P → "Reload app without saving") after each rebuild.
 
 `isDesktopOnly: true` — popout windows are a desktop-only feature.

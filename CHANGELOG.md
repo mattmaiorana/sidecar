@@ -3,19 +3,29 @@
 All notable changes to Sidecar Window are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+---
+
+## [1.0.1]
+
+### Changed
+- Renamed plugin from **Sidecar Browser** to **Sidecar Window** — `manifest.json`
+  id is now `obsidian-sidecar-window`. Rename the vault plugin folder to match.
+
+---
+
 ## [1.0.0]
 
-First stable release. The plugin was reduced to a focused, note-only model and
-hardened for use in a live vault.
+First stable release. Hardened for use in a live vault and reduced to a
+focused, note-only model.
 
 ### Added
 - **Open in Sidecar from anywhere** — command, ribbon icon, file-tree
   right-click, and an action button in every note's editor toolbar.
 - **Multiple independent Sidecars** open at once.
 - **Pin button** (always-on-top) in the top bar, shown only when Obsidian's
-  Electron remote API is reachable so it never silently no-ops.
+  Electron remote API is reachable — never silently no-ops.
 - **Clean teardown** — disabling the plugin removes all injected styling, header
-  bars, and always-on-top state, leaving the windows as plain popouts.
+  bars, and always-on-top state, leaving windows as plain popouts.
 
 ### Changed
 - **Note-only model.** The folder-listing project browser was removed; a Sidecar
@@ -25,56 +35,106 @@ hardened for use in a live vault.
 - **Positioning** — opens offset from the main window's top-right corner,
   computed fresh each time (clamped below the menu bar); only **height** is
   remembered. Width always resets to the 375px default.
-- **Styling is injected at runtime** into each popout's `<head>` — there is no
-  longer a `styles.css` file.
+- **Styling injected at runtime** into each popout's `<head>` — no `styles.css`.
 
-### Fixed / removed (safety)
-- **No longer hijacks your own popouts.** The previous restore-adoption logic
-  resized and restyled *every* markdown popout on reload — including windows you
-  opened with Obsidian's native "Open in new window." That logic was removed.
+### Removed / fixed (safety)
+- **No longer hijacks your own popouts.** The restore-adoption logic resized and
+  restyled *every* markdown popout on reload — including windows opened with
+  Obsidian's native "Open in new window." That logic was removed.
 - Removed the custom resize handle and magnetic snap-width, the dead `close()`
   path, and write-only saved window x/y/width.
 
-## [Unreleased]
+---
 
-### Design pass (post-v1)
+## [0.6.0]
 
-- **Fully custom chrome.** Hide Obsidian's native tab strip *and* per-view header
-  in the popout; render our own `.sidecar-bar` with `sidecar-*` class names so
-  the Sidecar is insulated from global UI plugins (e.g. Simplified Layout) and
-  our styles never leak out.
-- **`← All` title bar** injected into the note view (replaces the old custom
-  back-arrow action and Obsidian's native back/forward in the popout).
-- **Width resets to the default (425px) on every open**, with a sticky detent
-  that snaps back to 425px when resized near it. Height/position still persist.
-- **Live list** — the project list auto-refreshes on file create/delete/rename,
-  so the manual refresh button is gone.
-- **Tighter margins** — content uses the full narrow column (readable-line-width
-  disabled in the popout) for a denser, notes-panel feel.
+### Added
+- **Custom resize handle** — pointer-capture drag on the right edge with a
+  magnetic snap detent back to the default width.
 
-### v1 (0.1.0) — first working version
+### Fixed
+- Popout window width and position are now reliably applied via `resizeTo` /
+  `moveTo` in the `window-open` handler.
 
-The first version ships the full MVP:
+---
 
-- **"Open Sidecar Browser"** command (and a panel-right ribbon icon) that opens a
-  single tall, narrow popout window.
-- The popout opens narrow + tall by default and **remembers its size and
-  position** across sessions.
-- A **project-browser view** lists the markdown files in the configured projects
-  folder as a clickable list, with a small custom header.
-- Clicking a file opens it **into the same leaf** as a real `MarkdownView` for
-  full Obsidian editing (live preview, theme, other plugins).
-- A **back arrow** returns to the list.
-- Native chrome (tab bar, status bar, extra header actions) is **hidden in the
-  popout only**, scoped via a `sidecar-popout` body class, so the main window is
-  untouched.
-- A **settings tab** with one setting: the projects folder path (vault-relative,
+## [0.5.0]
+
+### Added
+- **Multiple independent Sidecar windows** — each `open(file)` call spawns a
+  fresh, independently-tracked popout; all managed simultaneously.
+
+### Changed
+- **`<style>` injection into `<head>`** replaces the `MutationObserver`
+  body-class approach — styles survive anything Obsidian does to `body.class`.
+- Popout marking re-applied across multiple ticks to beat Obsidian's own late
+  popout setup.
+
+### Fixed
+- Styling no longer drops on window focus loss.
+
+---
+
+## [0.4.0]
+
+**v1 reboot — note-only model.**
+
+### Changed
+- **Folder browser removed.** The Sidecar always opens a note directly as a
+  `MarkdownView`; the `ProjectBrowserView` is gone (recoverable from git history).
+- **Entry points expanded** — file-tree right-click and a toolbar action button
+  in every main-window `MarkdownView`, in addition to the command and ribbon.
+- Popout marking switched from `MutationObserver` to `workspace.on('window-open')`
+  for reliability.
+
+---
+
+## [0.3.0]
+
+### Added
+- **Restore adoption** — Sidecars that survive an Obsidian reload are
+  re-skinned on `onLayoutReady`. *(Later removed in 1.0.0 as a safety fix —
+  it also adopted the user's own native popouts.)*
+- **Build stamp** (`data-sidecar-build`) on the popout body for debugging.
+
+### Changed
+- Default width 375px; inline title hidden in popout.
+- Content font size 14px; padding 16px / 24px.
+
+### Fixed
+- `getContainer()`-based popout detection replaces fragile earlier heuristics.
+
+---
+
+## [0.2.0]
+
+### Added
+- **Custom popout chrome** — own header bar with `-webkit-app-region: drag`
+  inset for macOS traffic lights; native tab strip and view header hidden.
+- **Live project list** — auto-refreshes on vault file create / delete / rename.
+- Readable-line-width disabled in the popout for a denser column feel.
+
+### Changed
+- Width resets to the default on every open.
+- Removed the custom back-button action.
+
+### Fixed
+- Popout window remains draggable after the native tab strip is hidden.
+
+---
+
+## [0.1.0]
+
+First working version.
+
+### Added
+- **"Open in Sidecar"** command and ribbon icon — opens a single tall, narrow
+  popout window.
+- Popout **remembers its size and position** across sessions.
+- **Project-browser view** — lists direct-child `.md` files in the configured
+  folder as a clickable list; clicking opens the note as a `MarkdownView`; back
+  arrow returns to the list.
+- Native chrome (tab bar, status bar, header actions) **hidden in the popout
+  only**, scoped via `body.sidecar-popout` — main window untouched.
+- **Settings tab** with one setting: projects folder path (vault-relative,
   defaults to `Projects`).
-
-Architecture: one popout window / one leaf whose contents are swapped between the
-custom browser view and a real `MarkdownView`; chrome hidden via popout-scoped
-CSS; window bounds persisted in plugin settings. See `CLAUDE.md`.
-
-Out of scope for v1 (see `FUTURE_PLANS.md`): search/filter, nested subfolder
-navigation, per-project memory, OS window snapping, mobile, multiple Sidecar
-windows.

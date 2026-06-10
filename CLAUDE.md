@@ -117,7 +117,7 @@ npm run typecheck  # tsc -noEmit only — must pass clean
 Build output `main.js` is git-ignored. **Work only inside this repo** — do not
 write into any Obsidian vault from a session. The user copies the build outputs
 (`main.js` + `manifest.json` — there is no `styles.css`) into their vault's
-`.obsidian/plugins/obsidian-sidecar-browser/` folder themselves and reloads the
+`.obsidian/plugins/obsidian-sidecar-window/` folder themselves and reloads the
 plugin in Obsidian (Cmd+P → "Reload app without saving", or toggle it off/on).
 
 ## Conventions
