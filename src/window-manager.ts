@@ -1,4 +1,4 @@
-import { TFile, WorkspaceLeaf, WorkspaceWindow, setIcon } from "obsidian";
+import { MarkdownView, TFile, WorkspaceLeaf, WorkspaceWindow, setIcon } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 
 /** Class added to the popout window's <body> — debug/inspection only; the
@@ -47,6 +47,7 @@ export class SidecarWindowManager {
 	 * window — existing Sidecars are left untouched.
 	 */
 	async open(file: TFile): Promise<void> {
+		if (this.plugin.settings.popOutMode) this.closeMainWindowCopies(file);
 		const height = this.plugin.settings.windowHeight;
 		const pos = this.computeOpenPosition();
 		this.pendingPopout = true;
@@ -169,6 +170,17 @@ export class SidecarWindowManager {
 		bar.dataset.sidecarBuild = SIDECAR_BUILD;
 		bar.createDiv({ cls: "sidecar-bar-spacer" });
 
+		if (this.plugin.settings.popOutMode) {
+			const popInBtn = bar.createEl("button", {
+				cls: "sidecar-popin-btn clickable-icon",
+				attr: { "aria-label": "Return to main window" },
+			});
+			setIcon(popInBtn, "panel-left");
+			this.plugin.registerDomEvent(popInBtn, "click", () => {
+				void this.popIn(leaf);
+			});
+		}
+
 		// Only offer the pin if the setting is on AND the Electron remote API is
 		// reachable — otherwise the button would toggle "active" while doing nothing.
 		if (this.plugin.settings.showPinButton && this.alwaysOnTopSupported()) {
@@ -189,6 +201,26 @@ export class SidecarWindowManager {
 		}
 
 		container.prepend(bar);
+	}
+
+	/** Close all main-window leaves showing `file` (pop-out mode). */
+	private closeMainWindowCopies(file: TFile): void {
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			if (leaf.getContainer() instanceof WorkspaceWindow) continue;
+			if ((leaf.view as MarkdownView).file === file) leaf.detach();
+		}
+	}
+
+	/** Return the Sidecar's note to the main window and close the Sidecar. */
+	private async popIn(leaf: WorkspaceLeaf): Promise<void> {
+		const view = leaf.view;
+		if (!(view instanceof MarkdownView) || !view.file) return;
+		const file = view.file;
+		const win = this.popoutWindowFor(leaf);
+		const mainLeaf = this.app.workspace.getLeaf("tab");
+		await mainLeaf.openFile(file);
+		this.app.workspace.revealLeaf(mainLeaf);
+		if (win) win.close();
 	}
 
 	/** Whether Electron's remote API (needed for always-on-top) is reachable. */

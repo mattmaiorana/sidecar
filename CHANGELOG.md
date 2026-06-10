@@ -5,6 +5,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.2]
+
+### Added
+- **Pop-out mode** (off by default, toggle in settings) — when enabled, opening
+  a note in Sidecar closes the main-window copy, and a **pop-in button**
+  (`panel-left` icon) appears in the Sidecar bar to return the note to the main
+  window and close the Sidecar.
+
+---
+
 ## [1.0.1]
 
 ### Changed

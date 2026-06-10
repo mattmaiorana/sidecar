@@ -7,11 +7,15 @@ export interface SidecarBrowserSettings {
 	windowHeight: number;
 	/** Whether to show the always-on-top pin button in the Sidecar top bar. */
 	showPinButton: boolean;
+	/** When true, opening a note in Sidecar closes the main-window copy, and a
+	 *  pop-in button appears in the Sidecar bar to reverse the action. */
+	popOutMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	windowHeight: 1000,
 	showPinButton: true,
+	popOutMode: false,
 };
 
 export class SidecarBrowserSettingTab extends PluginSettingTab {
@@ -41,6 +45,21 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showPinButton)
 					.onChange(async (value) => {
 						this.plugin.settings.showPinButton = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Pop-out mode")
+			.setDesc(
+				"When opening a note in Sidecar, close the main-window copy. " +
+				"A pop-in button appears in the Sidecar bar to return the note to the main window."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.popOutMode)
+					.onChange(async (value) => {
+						this.plugin.settings.popOutMode = value;
 						await this.plugin.saveSettings();
 					})
 			);
