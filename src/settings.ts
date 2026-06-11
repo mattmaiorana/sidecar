@@ -2,8 +2,9 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 
 export interface SidecarBrowserSettings {
-	/** Last popout window height, restored on next open. Width always resets to
-	 *  the default; position is computed fresh from the main window. */
+	/** Default width for new Sidecar windows. Always resets to this on open. */
+	defaultWidth: number;
+	/** Last popout window height, restored on next open. */
 	windowHeight: number;
 	/** When true, the ribbon icon is hidden. */
 	hideRibbonButton: boolean;
@@ -16,6 +17,7 @@ export interface SidecarBrowserSettings {
 }
 
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
+	defaultWidth: 375,
 	windowHeight: 1000,
 	hideRibbonButton: false,
 	hideToolbarButton: false,
@@ -40,6 +42,38 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 			.setHeading()
 			.setDesc(
 				"Opens notes in a tall, narrow popout window alongside your main Obsidian window."
+			);
+
+		new Setting(containerEl)
+			.setName("Default width")
+			.setDesc("Width of new Sidecar windows in pixels.")
+			.addText((text) =>
+				text
+					.setValue(String(this.plugin.settings.defaultWidth))
+					.setPlaceholder("375")
+					.onChange(async (value) => {
+						const n = parseInt(value, 10);
+						if (!isNaN(n) && n >= 100 && n <= 2000) {
+							this.plugin.settings.defaultWidth = n;
+							await this.plugin.saveSettings();
+						}
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Default height")
+			.setDesc("Height of new Sidecar windows in pixels. Updated automatically when you resize a Sidecar.")
+			.addText((text) =>
+				text
+					.setValue(String(this.plugin.settings.windowHeight))
+					.setPlaceholder("1000")
+					.onChange(async (value) => {
+						const n = parseInt(value, 10);
+						if (!isNaN(n) && n >= 100 && n <= 4000) {
+							this.plugin.settings.windowHeight = n;
+							await this.plugin.saveSettings();
+						}
+					})
 			);
 
 		new Setting(containerEl)

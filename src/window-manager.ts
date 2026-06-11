@@ -8,8 +8,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
 export const SIDECAR_BUILD = "1.0.0";
-/** Width we always open at. Height is remembered; width always resets to this. */
-const DEFAULT_WIDTH = 375;
+
 
 /**
  * Manages all open Sidecar popout windows.
@@ -48,11 +47,12 @@ export class SidecarWindowManager {
 	 */
 	async open(file: TFile): Promise<void> {
 		this.closeMainWindowCopies(file);
+		const width = this.plugin.settings.defaultWidth;
 		const height = this.plugin.settings.windowHeight;
 		const pos = this.computeOpenPosition();
 		this.pendingPopout = true;
 		const leaf = this.app.workspace.openPopoutLeaf({
-			size: { width: DEFAULT_WIDTH, height },
+			size: { width, height },
 			x: pos.x,
 			y: pos.y,
 		});
@@ -106,7 +106,7 @@ export class SidecarWindowManager {
 			win.win.outerHeight > 50
 				? win.win.outerHeight
 				: this.plugin.settings.windowHeight;
-		win.win.resizeTo(DEFAULT_WIDTH, h);
+		win.win.resizeTo(this.plugin.settings.defaultWidth, h);
 		win.win.moveTo(pos.x, pos.y);
 		this.applyPopoutMarks(win.doc);
 	}
@@ -445,7 +445,7 @@ export class SidecarWindowManager {
 	private computeOpenPosition(): { x: number; y: number } {
 		const top = (window.screen as { availTop?: number }).availTop ?? 0;
 		return {
-			x: window.screenX + window.outerWidth - DEFAULT_WIDTH + 40,
+			x: window.screenX + window.outerWidth - this.plugin.settings.defaultWidth + 40,
 			y: Math.max(window.screenY - 40, top),
 		};
 	}
