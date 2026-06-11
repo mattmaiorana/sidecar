@@ -46,6 +46,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.hidePinButton = value;
 						await this.plugin.saveSettings();
+						this.plugin.windowManager.updatePinStyle();
 					})
 			);
 

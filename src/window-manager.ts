@@ -179,9 +179,9 @@ export class SidecarWindowManager {
 			void this.popIn(leaf);
 		});
 
-		// Only offer the pin if not hidden AND the Electron remote API is reachable
-		// — otherwise the button would toggle "active" while doing nothing.
-		if (!this.plugin.settings.hidePinButton && this.alwaysOnTopSupported()) {
+		// Only offer the pin if the Electron remote API is reachable — otherwise
+		// the button would toggle "active" while doing nothing (a lying UI).
+		if (this.alwaysOnTopSupported()) {
 			const pinBtn = bar.createEl("button", {
 				cls: "sidecar-pin-btn clickable-icon",
 				attr: { "aria-label": "Keep window on top" },
@@ -315,6 +315,25 @@ export class SidecarWindowManager {
 		doc.body.classList.add(POPOUT_BODY_CLASS);
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
 		this.injectPopoutStyles(doc);
+		this.applyPinStyle(doc);
+	}
+
+	private applyPinStyle(doc: Document): void {
+		const STYLE_ID = "sidecar-pin-style";
+		doc.getElementById(STYLE_ID)?.remove();
+		if (this.plugin.settings.hidePinButton) {
+			const el = doc.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = `.sidecar-pin-btn { display: none !important; }`;
+			doc.head.appendChild(el);
+		}
+	}
+
+	updatePinStyle(): void {
+		for (const leaf of this.leaves) {
+			const doc = this.popoutDocFor(leaf);
+			if (doc) this.applyPinStyle(doc);
+		}
 	}
 
 	/**
