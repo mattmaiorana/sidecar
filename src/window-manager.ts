@@ -316,7 +316,7 @@ export class SidecarWindowManager {
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
 		this.injectPopoutStyles(doc);
 		this.applyPinStyle(doc);
-		this.applyPopOutStyle(doc);
+		this.applyPopInStyle(doc);
 	}
 
 	private applyPinStyle(doc: Document): void {
@@ -337,10 +337,10 @@ export class SidecarWindowManager {
 		}
 	}
 
-	private applyPopOutStyle(doc: Document): void {
-		const STYLE_ID = "sidecar-popout-style";
+	private applyPopInStyle(doc: Document): void {
+		const STYLE_ID = "sidecar-popin-style";
 		doc.getElementById(STYLE_ID)?.remove();
-		if (this.plugin.settings.hidePopOut) {
+		if (this.plugin.settings.hidePopInButton) {
 			const el = doc.createElement("style");
 			el.id = STYLE_ID;
 			el.textContent = `.sidecar-popin-btn { display: none !important; }`;
@@ -348,10 +348,10 @@ export class SidecarWindowManager {
 		}
 	}
 
-	updatePopOutStyle(): void {
+	updatePopInStyle(): void {
 		for (const leaf of this.leaves) {
 			const doc = this.popoutDocFor(leaf);
-			if (doc) this.applyPopOutStyle(doc);
+			if (doc) this.applyPopInStyle(doc);
 		}
 	}
 

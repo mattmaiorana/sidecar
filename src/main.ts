@@ -38,7 +38,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 				return;
 			}
 			void this.windowManager.open(file);
-		}).addClass("sidecar-open-btn");
+		}).addClass("sidecar-ribbon-btn");
 
 		// When the user closes the popout, persist its final bounds and let the
 		// manager forget the leaf so the next open spawns a fresh window.
@@ -83,11 +83,12 @@ export default class SidecarBrowserPlugin extends Plugin {
 				view.addAction("arrow-up-right", "Open in Sidecar", () => {
 					const file = view.file;
 					if (file) void this.windowManager.open(file);
-				}).addClass("sidecar-open-btn");
+				}).addClass("sidecar-toolbar-btn");
 			})
 		);
 
-		this.updateOpenIconStyle();
+		this.updateRibbonStyle();
+		this.updateToolbarStyle();
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
 	}
 
@@ -95,16 +96,28 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// Reverse every mark we made (styles, header bars, pins) and save the
 		// final window geometry. Leaves the popout windows open as plain popouts.
 		this.windowManager?.teardown();
-		document.getElementById("sidecar-open-icon-style")?.remove();
+		document.getElementById("sidecar-ribbon-style")?.remove();
+		document.getElementById("sidecar-toolbar-style")?.remove();
 	}
 
-	updateOpenIconStyle(): void {
-		const STYLE_ID = "sidecar-open-icon-style";
+	updateRibbonStyle(): void {
+		const STYLE_ID = "sidecar-ribbon-style";
 		document.getElementById(STYLE_ID)?.remove();
-		if (this.settings.hidePopOut) {
+		if (this.settings.hideRibbonButton) {
 			const el = document.createElement("style");
 			el.id = STYLE_ID;
-			el.textContent = `.sidecar-open-btn { display: none !important; }`;
+			el.textContent = `.sidecar-ribbon-btn { display: none !important; }`;
+			document.head.appendChild(el);
+		}
+	}
+
+	updateToolbarStyle(): void {
+		const STYLE_ID = "sidecar-toolbar-style";
+		document.getElementById(STYLE_ID)?.remove();
+		if (this.settings.hideToolbarButton) {
+			const el = document.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = `.sidecar-toolbar-btn { display: none !important; }`;
 			document.head.appendChild(el);
 		}
 	}
