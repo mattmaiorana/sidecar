@@ -47,7 +47,7 @@ export class SidecarWindowManager {
 	 * window — existing Sidecars are left untouched.
 	 */
 	async open(file: TFile): Promise<void> {
-		if (this.plugin.settings.popOutMode) this.closeMainWindowCopies(file);
+		if (!this.plugin.settings.hidePopOut) this.closeMainWindowCopies(file);
 		const height = this.plugin.settings.windowHeight;
 		const pos = this.computeOpenPosition();
 		this.pendingPopout = true;
@@ -170,7 +170,7 @@ export class SidecarWindowManager {
 		bar.dataset.sidecarBuild = SIDECAR_BUILD;
 		bar.createDiv({ cls: "sidecar-bar-spacer" });
 
-		if (this.plugin.settings.popOutMode) {
+		if (!this.plugin.settings.hidePopOut) {
 			const popInBtn = bar.createEl("button", {
 				cls: "sidecar-popin-btn clickable-icon",
 				attr: { "aria-label": "Return to main window" },
@@ -181,9 +181,9 @@ export class SidecarWindowManager {
 			});
 		}
 
-		// Only offer the pin if the setting is on AND the Electron remote API is
-		// reachable — otherwise the button would toggle "active" while doing nothing.
-		if (this.plugin.settings.showPinButton && this.alwaysOnTopSupported()) {
+		// Only offer the pin if not hidden AND the Electron remote API is reachable
+		// — otherwise the button would toggle "active" while doing nothing.
+		if (!this.plugin.settings.hidePinButton && this.alwaysOnTopSupported()) {
 			const pinBtn = bar.createEl("button", {
 				cls: "sidecar-pin-btn clickable-icon",
 				attr: { "aria-label": "Keep window on top" },

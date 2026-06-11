@@ -5,17 +5,17 @@ export interface SidecarBrowserSettings {
 	/** Last popout window height, restored on next open. Width always resets to
 	 *  the default; position is computed fresh from the main window. */
 	windowHeight: number;
-	/** Whether to show the always-on-top pin button in the Sidecar top bar. */
-	showPinButton: boolean;
-	/** When true, opening a note in Sidecar closes the main-window copy, and a
-	 *  pop-in button appears in the Sidecar bar to reverse the action. */
-	popOutMode: boolean;
+	/** When true, the always-on-top pin button is hidden from the Sidecar top bar. */
+	hidePinButton: boolean;
+	/** When true, pop-out mode is disabled — notes stay open in the main window
+	 *  when opened in Sidecar and the pop-in button is hidden. */
+	hidePopOut: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	windowHeight: 1000,
-	showPinButton: true,
-	popOutMode: false,
+	hidePinButton: false,
+	hidePopOut: false,
 };
 
 export class SidecarBrowserSettingTab extends PluginSettingTab {
@@ -38,28 +38,28 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show pin button")
-			.setDesc("Show the always-on-top pin button in the Sidecar top bar.")
+			.setName("Hide pin button")
+			.setDesc("Hide the always-on-top pin button from the Sidecar top bar.")
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.showPinButton)
+					.setValue(this.plugin.settings.hidePinButton)
 					.onChange(async (value) => {
-						this.plugin.settings.showPinButton = value;
+						this.plugin.settings.hidePinButton = value;
 						await this.plugin.saveSettings();
 					})
 			);
 
 		new Setting(containerEl)
-			.setName("Pop-out mode")
+			.setName("Hide pop-out icons")
 			.setDesc(
-				"When opening a note in Sidecar, close the main-window copy. " +
-				"A pop-in button appears in the Sidecar bar to return the note to the main window."
+				"Disable pop-out mode — notes will stay open in the main window " +
+				"when opened in Sidecar, and the pop-in button will be hidden."
 			)
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.popOutMode)
+					.setValue(this.plugin.settings.hidePopOut)
 					.onChange(async (value) => {
-						this.plugin.settings.popOutMode = value;
+						this.plugin.settings.hidePopOut = value;
 						await this.plugin.saveSettings();
 					})
 			);
