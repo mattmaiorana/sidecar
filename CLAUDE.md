@@ -75,9 +75,10 @@ no syncing.
    nothing. Pin state is in-memory only (not persisted across reloads).
 
 8. **Clean teardown.** `onunload` calls `windowManager.teardown()`, which reverses
-   every mark (saves height, unpins, removes the injected `<style>`, our header
-   bar, and the body class) so disabling the plugin leaves the popouts as plain
-   windows with no leftover styling or stuck always-on-top state.
+   every mark (unpins, removes the injected `<style>`, our header bar, and the
+   body class) so disabling the plugin leaves the popouts as plain windows with
+   no leftover styling or stuck always-on-top state. It does **not** save any
+   bounds — there is nothing to save (see #6).
 
 ## API correctness
 
@@ -102,7 +103,7 @@ names. Key APIs this plugin depends on:
 manifest.json       plugin metadata (id, isDesktopOnly)
 src/main.ts         Plugin entry: load settings, commands, ribbon, event wiring.
 src/window-manager.ts  Manages all popout windows: open, mark, header, pin,
-                    height persistence, teardown. Owns the injected popout CSS.
+                    sizing, teardown. Owns the injected popout CSS.
 src/settings.ts     Settings interface, defaults, settings tab.
 ```
 

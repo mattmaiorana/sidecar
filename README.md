@@ -26,8 +26,10 @@ window a clean, narrow, minimal look and a sensible default size and position.
 - A **pin button** in the top bar keeps the window above all other apps (handy
   next to a browser). Available when Obsidian's Electron remote API is reachable.
 - Open **as many Sidecars as you like** — each is independent.
-- The window opens at a configurable width, offset from your main window's
-  top-right corner, and **remembers its height** between sessions.
+- The window opens at a configurable width and height (both set in settings),
+  offset from your main window's top-right corner. Resizing a Sidecar by hand
+  doesn't change the saved size — the next one still opens at the configured
+  dimensions.
 
 ## Settings
 

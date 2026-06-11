@@ -15,9 +15,9 @@ export const SIDECAR_BUILD = "1.0.3";
  *
  * Each call to open(file) creates a new independent popout leaf via the same
  * native API behind "Open in new window" (`workspace.openPopoutLeaf`). Multiple
- * Sidecars can be open simultaneously; each is styled, bounds-tracked, and
- * optionally pinned (always-on-top) independently. Only windows this manager
- * opens are ever styled or resized — the user's own popouts are left untouched.
+ * Sidecars can be open simultaneously; each is styled, sized, and optionally
+ * pinned (always-on-top) independently. Only windows this manager opens are
+ * ever styled or resized — the user's own popouts are left untouched.
  */
 export class SidecarWindowManager {
 	private plugin: SidecarBrowserPlugin;
@@ -113,10 +113,10 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Reverse every mark we made, so disabling the plugin leaves no trace: save
-	 * final bounds, unpin always-on-top, remove the injected styles, our header
-	 * bar, and the body class. Windows themselves are left open (now plain
-	 * popouts). Called from the plugin's onunload.
+	 * Reverse every mark we made, so disabling the plugin leaves no trace: unpin
+	 * always-on-top, remove the injected styles, our header bar, and the body
+	 * class. Windows themselves are left open (now plain popouts). No bounds are
+	 * saved — sizing is settings-driven, not captured. Called from onunload.
 	 */
 	teardown(): void {
 		for (const leaf of this.leaves) {

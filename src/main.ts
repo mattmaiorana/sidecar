@@ -93,8 +93,8 @@ export default class SidecarBrowserPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		// Reverse every mark we made (styles, header bars, pins) and save the
-		// final window geometry. Leaves the popout windows open as plain popouts.
+		// Reverse every mark we made (styles, header bars, pins). Leaves the
+		// popout windows open as plain popouts.
 		this.windowManager?.teardown();
 		document.getElementById("sidecar-ribbon-style")?.remove();
 		document.getElementById("sidecar-toolbar-style")?.remove();

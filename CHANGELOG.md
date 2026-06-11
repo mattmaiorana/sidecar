@@ -7,10 +7,32 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [1.0.3]
 
+Bundles the settings and behavior work that accumulated since 1.0.2 (none of it
+was deployed on its own).
+
+### Added
+- **Configurable Sidecar size** — "Sidecar width" (200–1200 px, default 375) and
+  "Sidecar height" (300–3000 px, default 1000) settings. Values are clamped to
+  range on blur; clearing a field restores the default.
+- **"Make text smaller" toggle** (on by default) — turns the Sidecar's
+  smaller-text styling on or off, applied live to open Sidecars. The styling now
+  also scales headings (h1 18px → h4–h6 14px), code blocks and inline code
+  (13px), and callout titles and the properties panel (14px), in addition to
+  body text (14px) and the inline title (18px). Works in both reading view and
+  the live-preview editor.
+- **"Make padding smaller" toggle** (on by default) — turns the tighter content
+  padding on or off, applied live to open Sidecars.
+- **Four button-visibility toggles** (all off by default, so every button shows):
+  hide ribbon button, hide toolbar button, hide pop-in button, hide pin button.
+
 ### Changed
-- **Heading sizes scaled down** when "Make text smaller" is on — h1 matches the
-  inline title (18px), h2 16px, h3 15px, h4–h6 14px (body text). Applies in
-  both reading view and the live-preview editor.
+- **Pop-out mode is now the default behavior**, not an opt-in toggle — opening a
+  note in Sidecar always closes the main-window copy first.
+- **Icons** — the open-in-Sidecar buttons use `arrow-up-right` and the pop-in
+  button uses `arrow-down-left` (was `panel-left`).
+- **No auto-capture of window size** — height comes only from the setting; the
+  window is no longer measured and saved when you resize it. Width already
+  always reset to the default on open.
 
 ---
 
