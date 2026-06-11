@@ -54,7 +54,7 @@ export class SidecarWindowManager {
 		});
 		this.leaves.add(leaf);
 
-		await leaf.openFile(file, { active: true, state: this.viewStateForMode() });
+		await leaf.openFile(file, { active: true });
 		this.decorateHeader(leaf);
 		await this.app.workspace.revealLeaf(leaf);
 
@@ -184,14 +184,6 @@ export class SidecarWindowManager {
 		}
 
 		container.prepend(bar);
-	}
-
-	private viewStateForMode(): Record<string, unknown> {
-		switch (this.plugin.settings.viewMode) {
-			case "reading": return { mode: "preview" };
-			case "source":  return { mode: "source", source: true };
-			default:        return { mode: "source" };
-		}
 	}
 
 	/** Close all main-window leaves showing `file` (pop-out mode). */

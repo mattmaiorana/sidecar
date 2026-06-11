@@ -6,8 +6,6 @@ export interface SidecarBrowserSettings {
 	defaultWidth: number;
 	/** Height for new Sidecar windows. */
 	windowHeight: number;
-	/** View mode to open notes in. */
-	viewMode: "editor" | "reading" | "source";
 	/** When true, applies a smaller font size to Sidecar note content. */
 	smallerText: boolean;
 	/** When true, applies tighter padding to Sidecar note content. */
@@ -25,7 +23,6 @@ export interface SidecarBrowserSettings {
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	defaultWidth: 375,
 	windowHeight: 1000,
-	viewMode: "editor",
 	smallerText: true,
 	smallerPadding: true,
 	hideRibbonButton: false,
@@ -119,21 +116,6 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
-
-		new Setting(containerEl)
-			.setName("Default view")
-			.setDesc("View mode to open notes in.")
-			.addDropdown((drop) =>
-				drop
-					.addOption("editor", "Editor (live preview)")
-					.addOption("reading", "Reading view")
-					.addOption("source", "Source mode")
-					.setValue(this.plugin.settings.viewMode)
-					.onChange(async (value) => {
-						this.plugin.settings.viewMode = value as "editor" | "reading" | "source";
-						await this.plugin.saveSettings();
-					})
-			);
 
 		new Setting(containerEl)
 			.setName("Make text smaller")
