@@ -217,6 +217,12 @@ export class SidecarWindowManager {
 		if (!(view instanceof MarkdownView) || !view.file) return;
 		const file = view.file;
 		const win = this.popoutWindowFor(leaf);
+		// Silently activate a main-window leaf so getLeaf("tab") opens there
+		// rather than in the focused Sidecar popout.
+		const anchor = this.app.workspace.getMostRecentLeaf(
+			this.app.workspace.rootSplit
+		);
+		if (anchor) this.app.workspace.setActiveLeaf(anchor, { focus: false });
 		const mainLeaf = this.app.workspace.getLeaf("tab");
 		await mainLeaf.openFile(file);
 		this.app.workspace.revealLeaf(mainLeaf);
