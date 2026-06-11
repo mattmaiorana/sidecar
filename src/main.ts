@@ -31,7 +31,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 		});
 
 		// Optional ribbon shortcut for the same command.
-		this.addRibbonIcon("panel-right", "Open current note in Sidecar", () => {
+		this.addRibbonIcon("move-up-right", "Open current note in Sidecar", () => {
 			const file = this.app.workspace.getActiveFile();
 			if (!file) {
 				new Notice("Open a note first to view it in Sidecar.");
@@ -63,7 +63,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 				menu.addItem((item) =>
 					item
 						.setTitle("Open in Sidecar")
-						.setIcon("panel-right")
+						.setIcon("move-up-right")
 						.onClick(() => void this.windowManager.open(file))
 				);
 			})
@@ -80,7 +80,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 				if (!(view instanceof MarkdownView)) return;
 				if (decoratedViews.has(view)) return;
 				decoratedViews.add(view);
-				view.addAction("panel-right", "Open in Sidecar", () => {
+				view.addAction("move-up-right", "Open in Sidecar", () => {
 					const file = view.file;
 					if (file) void this.windowManager.open(file);
 				});
