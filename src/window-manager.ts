@@ -153,6 +153,25 @@ export class SidecarWindowManager {
 
 		const bar = createDiv({ cls: "sidecar-bar sidecar-titlebar" });
 		bar.dataset.sidecarBuild = SIDECAR_BUILD;
+
+		const backBtn = bar.createEl("button", {
+			cls: "sidecar-nav-btn sidecar-nav-back-btn clickable-icon",
+			attr: { "aria-label": "Navigate back" },
+		});
+		setIcon(backBtn, "arrow-left");
+		this.plugin.registerDomEvent(backBtn, "click", () => {
+			this.navigate(leaf, "back");
+		});
+
+		const fwdBtn = bar.createEl("button", {
+			cls: "sidecar-nav-btn sidecar-nav-fwd-btn clickable-icon",
+			attr: { "aria-label": "Navigate forward" },
+		});
+		setIcon(fwdBtn, "arrow-right");
+		this.plugin.registerDomEvent(fwdBtn, "click", () => {
+			this.navigate(leaf, "forward");
+		});
+
 		bar.createDiv({ cls: "sidecar-bar-spacer" });
 
 		const popInBtn = bar.createEl("button", {
@@ -302,6 +321,7 @@ export class SidecarWindowManager {
 		this.injectPopoutStyles(doc);
 		this.applyPinStyle(doc);
 		this.applyPopInStyle(doc);
+		this.applyNavStyle(doc);
 	}
 
 	private applyPinStyle(doc: Document): void {
@@ -338,6 +358,30 @@ export class SidecarWindowManager {
 			const doc = this.popoutDocFor(leaf);
 			if (doc) this.applyPopInStyle(doc);
 		}
+	}
+
+	private applyNavStyle(doc: Document): void {
+		const STYLE_ID = "sidecar-nav-style";
+		doc.getElementById(STYLE_ID)?.remove();
+		if (!this.plugin.settings.showNavButtons) {
+			const el = doc.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = `.sidecar-nav-btn { display: none !important; }`;
+			doc.head.appendChild(el);
+		}
+	}
+
+	updateNavStyle(): void {
+		for (const leaf of this.leaves) {
+			const doc = this.popoutDocFor(leaf);
+			if (doc) this.applyNavStyle(doc);
+		}
+	}
+
+	private navigate(leaf: WorkspaceLeaf, direction: "back" | "forward"): void {
+		this.app.workspace.setActiveLeaf(leaf, { focus: false });
+		const cmds = (this.app as unknown as { commands: { executeCommandById(id: string): void } }).commands;
+		cmds.executeCommandById(direction === "back" ? "app:go-back" : "app:go-forward");
 	}
 
 	/** Re-inject the base popout styles on all open Sidecars (picks up text/padding setting changes). */
@@ -383,6 +427,12 @@ export class SidecarWindowManager {
   border-bottom: 1px solid var(--background-modifier-border);
 }
 .sidecar-bar-spacer { flex: 1 1 auto; }
+.sidecar-nav-btn {
+  -webkit-app-region: no-drag;
+  color: var(--icon-color);
+  opacity: var(--icon-opacity);
+}
+.sidecar-nav-btn:hover { opacity: 1; }
 .sidecar-pin-btn {
   -webkit-app-region: no-drag;
   color: var(--icon-color);

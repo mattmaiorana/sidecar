@@ -18,6 +18,8 @@ export interface SidecarBrowserSettings {
 	hidePopInButton: boolean;
 	/** When true, the always-on-top pin button is hidden from the Sidecar bar. */
 	hidePinButton: boolean;
+	/** When true, back and forward navigation buttons are shown in the Sidecar bar. */
+	showNavButtons: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
@@ -29,6 +31,7 @@ export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	hideToolbarButton: false,
 	hidePopInButton: false,
 	hidePinButton: false,
+	showNavButtons: false,
 };
 
 export class SidecarBrowserSettingTab extends PluginSettingTab {
@@ -192,6 +195,19 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 						this.plugin.settings.hidePinButton = value;
 						await this.plugin.saveSettings();
 						this.plugin.windowManager.updatePinStyle();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show back and forward buttons")
+			.setDesc("Show navigation buttons in the Sidecar bar to move through the note history.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showNavButtons)
+					.onChange(async (value) => {
+						this.plugin.settings.showNavButtons = value;
+						await this.plugin.saveSettings();
+						this.plugin.windowManager.updateNavStyle();
 					})
 			);
 	}
