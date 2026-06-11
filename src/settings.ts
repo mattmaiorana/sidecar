@@ -4,8 +4,14 @@ import type SidecarBrowserPlugin from "./main";
 export interface SidecarBrowserSettings {
 	/** Default width for new Sidecar windows. Always resets to this on open. */
 	defaultWidth: number;
-	/** Last popout window height, restored on next open. */
+	/** Height for new Sidecar windows. */
 	windowHeight: number;
+	/** View mode to open notes in. */
+	viewMode: "editor" | "reading" | "source";
+	/** When true, applies a smaller font size to Sidecar note content. */
+	smallerText: boolean;
+	/** When true, applies tighter padding to Sidecar note content. */
+	smallerPadding: boolean;
 	/** When true, the ribbon icon is hidden. */
 	hideRibbonButton: boolean;
 	/** When true, the per-note toolbar button is hidden. */
@@ -19,6 +25,9 @@ export interface SidecarBrowserSettings {
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	defaultWidth: 375,
 	windowHeight: 1000,
+	viewMode: "editor",
+	smallerText: true,
+	smallerPadding: true,
 	hideRibbonButton: false,
 	hideToolbarButton: false,
 	hidePopInButton: false,
@@ -110,6 +119,47 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
+
+		new Setting(containerEl)
+			.setName("Default view")
+			.setDesc("View mode to open notes in.")
+			.addDropdown((drop) =>
+				drop
+					.addOption("editor", "Editor (live preview)")
+					.addOption("reading", "Reading view")
+					.addOption("source", "Source mode")
+					.setValue(this.plugin.settings.viewMode)
+					.onChange(async (value) => {
+						this.plugin.settings.viewMode = value as "editor" | "reading" | "source";
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Make text smaller")
+			.setDesc("Apply a smaller font size to note content in the Sidecar.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.smallerText)
+					.onChange(async (value) => {
+						this.plugin.settings.smallerText = value;
+						await this.plugin.saveSettings();
+						this.plugin.windowManager.refreshPopoutStyles();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Make padding smaller")
+			.setDesc("Apply tighter padding to note content in the Sidecar.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.smallerPadding)
+					.onChange(async (value) => {
+						this.plugin.settings.smallerPadding = value;
+						await this.plugin.saveSettings();
+						this.plugin.windowManager.refreshPopoutStyles();
+					})
+			);
 
 		new Setting(containerEl)
 			.setName("Hide ribbon button")

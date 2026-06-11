@@ -54,7 +54,7 @@ export class SidecarWindowManager {
 		});
 		this.leaves.add(leaf);
 
-		await leaf.openFile(file, { active: true });
+		await leaf.openFile(file, { active: true, state: this.viewStateForMode() });
 		this.decorateHeader(leaf);
 		await this.app.workspace.revealLeaf(leaf);
 
@@ -184,6 +184,14 @@ export class SidecarWindowManager {
 		}
 
 		container.prepend(bar);
+	}
+
+	private viewStateForMode(): Record<string, unknown> {
+		switch (this.plugin.settings.viewMode) {
+			case "reading": return { mode: "preview" };
+			case "source":  return { mode: "source", source: true };
+			default:        return { mode: "source" };
+		}
 	}
 
 	/** Close all main-window leaves showing `file` (pop-out mode). */
@@ -340,6 +348,16 @@ export class SidecarWindowManager {
 		}
 	}
 
+	/** Re-inject the base popout styles on all open Sidecars (picks up text/padding setting changes). */
+	refreshPopoutStyles(): void {
+		for (const leaf of this.leaves) {
+			const doc = this.popoutDocFor(leaf);
+			if (!doc) continue;
+			doc.getElementById(STYLE_ID)?.remove();
+			this.injectPopoutStyles(doc);
+		}
+	}
+
 	/**
 	 * Inject the chrome-hiding + layout CSS directly into the popout's <head>.
 	 * This is the single source of truth for Sidecar styling: the rules are not
@@ -348,6 +366,7 @@ export class SidecarWindowManager {
 	 */
 	private injectPopoutStyles(doc: Document): void {
 		if (doc.getElementById(STYLE_ID)) return;
+		const { smallerText, smallerPadding } = this.plugin.settings;
 		const el = doc.createElement("style");
 		el.id = STYLE_ID;
 		el.textContent = `
@@ -384,11 +403,11 @@ export class SidecarWindowManager {
   max-width: none !important;
   margin-inline: 0 !important;
 }
-.markdown-source-view .cm-scroller,
-.markdown-preview-view { padding: 16px 24px !important; }
-.markdown-source-view .cm-content,
+${smallerPadding ? `.markdown-source-view .cm-scroller,
+.markdown-preview-view { padding: 16px 24px !important; }` : ""}
+${smallerText ? `.markdown-source-view .cm-content,
 .markdown-preview-view { font-size: 14px !important; }
-.inline-title { font-size: 18px !important; }
+.inline-title { font-size: 18px !important; }` : ""}
 		`;
 		doc.head.appendChild(el);
 	}
