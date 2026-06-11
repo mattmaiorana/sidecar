@@ -78,7 +78,6 @@ To re-add it safely it must only touch *our* windows. Approaches:
 - **Pinning / last-opened memory per project** — remember the last note opened.
 - **OS window snapping** — snap to a screen edge or preset half-width position.
 - **Mobile support** — popout windows are desktop-only (`isDesktopOnly: true`).
-- **Configurable default window size** in settings.
 - **Folder picker in settings** — dropdown instead of text path (only relevant
   if a folder setting is re-introduced).
 - The following items are contingent on the folder-browser view being restored:

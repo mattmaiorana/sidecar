@@ -23,14 +23,16 @@ no syncing.
    their other plugins. Do **not** embed a textarea or a standalone CodeMirror.
 
 3. **Entry points:**
-   - Command "Open current note in Sidecar" / ribbon button → opens the active file.
+   - Command "Open current note in Sidecar" / ribbon button (`arrow-up-right`) → opens the active file.
    - Right-click `.md` file in file tree → "Open in Sidecar".
-   - `panel-right` action button injected into every main-window `MarkdownView`
+   - `arrow-up-right` action button injected into every main-window `MarkdownView`
      toolbar (via `active-leaf-change`, guarded to skip popout leaves).
-   All three call `windowManager.open(file)`, which always creates a fresh window.
+   All four call `windowManager.open(file)`, which closes any main-window copy of
+   the file first (pop-out mode) and then creates a fresh popout window.
 
 4. **Minimal custom chrome, popout-scoped.** The Sidecar header is a narrow bar
-   containing only the macOS traffic-light drag inset and a pin button (always-on-top
+   containing the macOS traffic-light drag inset, a pop-in button (`arrow-down-left`,
+   returns the note to the main window), and a pin button (`pin`, always-on-top
    toggle) at the right edge. Obsidian's native tab strip and per-view header are
    hidden; the note's own inline title and content fill the rest. `sidecar-*` class
    names are used so other plugins don't interfere.
@@ -53,14 +55,15 @@ no syncing.
    every reload. It was removed. A Sidecar that survives a reload simply comes
    back as a plain popout; reopen it to re-skin.
 
-6. **Bounds persistence.** Default height 1000 (`DEFAULT_SETTINGS.windowHeight`);
-   width is the `DEFAULT_WIDTH` const (375). **Width always resets to
-   `DEFAULT_WIDTH` on open** (because `openPopoutLeaf`'s `size.width` parameter is
-   silently ignored by Obsidian — width is forced via `win.resizeTo` in
-   `handleWindowOpen`). Only **height** is saved/restored. Position is always
-   computed fresh from the main window's live geometry (right edge +40px, top
-   −40px, y clamped to the screen's available top). Height is captured on `resize`
-   (debounced 300ms), `blur`, `beforeunload`, and `window-close`.
+6. **Bounds.** Width and height come from `settings.defaultWidth` (default 375)
+   and `settings.windowHeight` (default 1000) — both user-configurable in the
+   settings tab, clamped to sane ranges. **Width always resets to
+   `settings.defaultWidth` on open** (because `openPopoutLeaf`'s `size.width`
+   parameter is silently ignored by Obsidian — width is forced via `win.resizeTo`
+   in `handleWindowOpen`). There is **no auto-capture of bounds**: height is not
+   updated when the user resizes the window — it only controls the initial size on
+   the next open. Position is always computed fresh from the main window's live
+   geometry (right edge +40px, top −40px, y clamped to the screen's available top).
 
 7. **Always-on-top (pin button).** The pin button calls `setAlwaysOnTop(popoutWin,
    pinned)`, which injects a `<script>` into the popout document to call

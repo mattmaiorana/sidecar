@@ -7,7 +7,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 /** id of the <style> element we inject into each popout's <head>. */
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
-export const SIDECAR_BUILD = "1.0.0";
+export const SIDECAR_BUILD = "1.0.3";
 
 
 /**
@@ -399,7 +399,18 @@ ${smallerPadding ? `.markdown-source-view .cm-scroller,
 .markdown-preview-view { padding: 16px 24px !important; }` : ""}
 ${smallerText ? `.markdown-source-view .cm-content,
 .markdown-preview-view { font-size: 14px !important; }
-.inline-title { font-size: 18px !important; }` : ""}
+.inline-title { font-size: 18px !important; }
+.markdown-preview-view h1, .markdown-source-view .cm-header-1 { font-size: 18px !important; }
+.markdown-preview-view h2, .markdown-source-view .cm-header-2 { font-size: 16px !important; }
+.markdown-preview-view h3, .markdown-source-view .cm-header-3 { font-size: 15px !important; }
+.markdown-preview-view h4, .markdown-source-view .cm-header-4,
+.markdown-preview-view h5, .markdown-source-view .cm-header-5,
+.markdown-preview-view h6, .markdown-source-view .cm-header-6 { font-size: 14px !important; }
+.markdown-preview-view pre,
+.markdown-preview-view code,
+.markdown-source-view .cm-inline-code { font-size: 13px !important; }
+.callout-title { font-size: 14px !important; }
+.metadata-container { font-size: 14px !important; }` : ""}
 		`;
 		doc.head.appendChild(el);
 	}

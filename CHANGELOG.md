@@ -5,6 +5,15 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.3]
+
+### Changed
+- **Heading sizes scaled down** when "Make text smaller" is on — h1 matches the
+  inline title (18px), h2 16px, h3 15px, h4–h6 14px (body text). Applies in
+  both reading view and the live-preview editor.
+
+---
+
 ## [1.0.2]
 
 ### Added
