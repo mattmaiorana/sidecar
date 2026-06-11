@@ -46,51 +46,70 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Sidecar width")
-			.setDesc("Width of new Sidecar windows in pixels.")
-			.addText((text) =>
+			.setDesc("Width of new Sidecar windows in pixels. Valid range: 200–1200.")
+			.addText((text) => {
 				text
 					.setValue(
 						this.plugin.settings.defaultWidth !== DEFAULT_SETTINGS.defaultWidth
 							? String(this.plugin.settings.defaultWidth)
 							: ""
 					)
-					.setPlaceholder("Default: 375")
-					.onChange(async (value) => {
-						if (value === "") {
-							this.plugin.settings.defaultWidth = DEFAULT_SETTINGS.defaultWidth;
+					.setPlaceholder("Default: 375");
+				text.inputEl.addEventListener("blur", async () => {
+					const raw = text.getValue().trim();
+					if (raw === "") {
+						this.plugin.settings.defaultWidth = DEFAULT_SETTINGS.defaultWidth;
+					} else {
+						const n = parseInt(raw, 10);
+						if (!isNaN(n)) {
+							const clamped = Math.min(1200, Math.max(200, n));
+							this.plugin.settings.defaultWidth = clamped;
+							if (clamped !== n) text.setValue(String(clamped));
 						} else {
-							const n = parseInt(value, 10);
-							if (!isNaN(n) && n >= 100 && n <= 2000) {
-								this.plugin.settings.defaultWidth = n;
-							}
+							// Non-numeric — revert display to current saved value
+							text.setValue(
+								this.plugin.settings.defaultWidth !== DEFAULT_SETTINGS.defaultWidth
+									? String(this.plugin.settings.defaultWidth)
+									: ""
+							);
 						}
-						await this.plugin.saveSettings();
-					})
-			);
+					}
+					await this.plugin.saveSettings();
+				});
+			});
 
 		new Setting(containerEl)
 			.setName("Sidecar height")
-			.setDesc("Height of new Sidecar windows in pixels. Updated automatically when you resize a Sidecar.")
-			.addText((text) =>
+			.setDesc("Height of new Sidecar windows in pixels. Valid range: 300–3000.")
+			.addText((text) => {
 				text
 					.setValue(
 						this.plugin.settings.windowHeight !== DEFAULT_SETTINGS.windowHeight
 							? String(this.plugin.settings.windowHeight)
 							: ""
 					)
-					.setPlaceholder("Default: 1000")
-					.onChange(async (value) => {
-						if (value === "") {
-							this.plugin.settings.windowHeight = DEFAULT_SETTINGS.windowHeight;
+					.setPlaceholder("Default: 1000");
+				text.inputEl.addEventListener("blur", async () => {
+					const raw = text.getValue().trim();
+					if (raw === "") {
+						this.plugin.settings.windowHeight = DEFAULT_SETTINGS.windowHeight;
+					} else {
+						const n = parseInt(raw, 10);
+						if (!isNaN(n)) {
+							const clamped = Math.min(3000, Math.max(300, n));
+							this.plugin.settings.windowHeight = clamped;
+							if (clamped !== n) text.setValue(String(clamped));
 						} else {
-							const n = parseInt(value, 10);
-							if (!isNaN(n) && n >= 100 && n <= 4000) {
-								this.plugin.settings.windowHeight = n;
-							}
+							text.setValue(
+								this.plugin.settings.windowHeight !== DEFAULT_SETTINGS.windowHeight
+									? String(this.plugin.settings.windowHeight)
+									: ""
+							);
 						}
-						await this.plugin.saveSettings();
-					})
-			);
+					}
+					await this.plugin.saveSettings();
+				});
+			});
 
 		new Setting(containerEl)
 			.setName("Hide ribbon button")

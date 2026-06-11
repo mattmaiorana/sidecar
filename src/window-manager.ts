@@ -23,12 +23,8 @@ export class SidecarWindowManager {
 	private plugin: SidecarBrowserPlugin;
 	/** All leaves currently living inside open Sidecar popouts. */
 	private leaves = new Set<WorkspaceLeaf>();
-	/** Per-leaf debounce handles for bounds persistence. */
-	private saveTimers = new Map<WorkspaceLeaf, number>();
 	/** True between requesting a popout and its window-open event firing. */
 	private pendingPopout = false;
-	/** Leaves whose resize/bounds listeners are already attached. */
-	private boundsAttached = new Set<WorkspaceLeaf>();
 	/** Leaves whose window is currently pinned always-on-top (in-memory only;
 	 *  not persisted, so a reload clears pins). */
 	private pinnedLeaves = new Set<WorkspaceLeaf>();
@@ -85,7 +81,6 @@ export class SidecarWindowManager {
 					win.moveTo(pos.x, pos.y);
 				}
 			}
-			this.ensureBoundsAttached(leaf);
 		};
 		setup();
 		window.setTimeout(setup, 0);
@@ -102,23 +97,16 @@ export class SidecarWindowManager {
 		if (!this.pendingPopout) return;
 		this.pendingPopout = false;
 		const pos = this.computeOpenPosition();
-		const h =
-			win.win.outerHeight > 50
-				? win.win.outerHeight
-				: this.plugin.settings.windowHeight;
-		win.win.resizeTo(this.plugin.settings.defaultWidth, h);
+		win.win.resizeTo(this.plugin.settings.defaultWidth, this.plugin.settings.windowHeight);
 		win.win.moveTo(pos.x, pos.y);
 		this.applyPopoutMarks(win.doc);
 	}
 
-	/** React to a specific popout being closed — saves bounds and removes leaf. */
+	/** React to a specific popout being closed — removes the leaf from tracking. */
 	handleWindowClose(win: WorkspaceWindow): void {
 		for (const leaf of this.leaves) {
 			if (this.workspaceWindowFor(leaf) !== win) continue;
-			this.captureBounds(leaf);
 			this.leaves.delete(leaf);
-			this.boundsAttached.delete(leaf);
-			this.saveTimers.delete(leaf);
 			this.pinnedLeaves.delete(leaf);
 			break;
 		}
@@ -132,7 +120,6 @@ export class SidecarWindowManager {
 	 */
 	teardown(): void {
 		for (const leaf of this.leaves) {
-			this.captureBounds(leaf);
 			if (this.pinnedLeaves.has(leaf)) {
 				const win = this.popoutWindowFor(leaf);
 				if (win) this.setAlwaysOnTop(win, false);
@@ -148,8 +135,6 @@ export class SidecarWindowManager {
 				?.remove();
 		}
 		this.leaves.clear();
-		this.boundsAttached.clear();
-		this.saveTimers.clear();
 		this.pinnedLeaves.clear();
 	}
 
@@ -409,34 +394,6 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Attach bounds listeners once the popout window is available. Guarded
-	 * per-leaf so schedulePopoutSetup retries are no-ops after first success.
-	 */
-	private ensureBoundsAttached(leaf: WorkspaceLeaf): void {
-		if (this.boundsAttached.has(leaf)) return;
-		const win = this.popoutWindowFor(leaf);
-		if (!win) return;
-		this.boundsAttached.add(leaf);
-
-		this.plugin.registerDomEvent(win, "resize", () => {
-			const existing = this.saveTimers.get(leaf);
-			if (existing !== undefined) win.clearTimeout(existing);
-			this.saveTimers.set(
-				leaf,
-				win.setTimeout(() => {
-					this.captureBounds(leaf);
-					this.saveTimers.delete(leaf);
-				}, 300)
-			);
-		});
-
-		this.plugin.registerDomEvent(win, "blur", () => this.captureBounds(leaf));
-		this.plugin.registerDomEvent(win, "beforeunload", () =>
-			this.captureBounds(leaf)
-		);
-	}
-
-	/**
 	 * Position the sidecar 40px above and 40px right of the main window's
 	 * top-right corner, computed fresh from live geometry so it follows the main
 	 * window. The y is clamped to the screen's available top so it never tucks
@@ -450,12 +407,4 @@ export class SidecarWindowManager {
 		};
 	}
 
-	/** Persist the popout's current height (the only restored dimension). */
-	private captureBounds(leaf: WorkspaceLeaf): void {
-		const win = this.popoutWindowFor(leaf);
-		if (!win) return;
-		if (win.outerHeight < 50) return;
-		this.plugin.settings.windowHeight = win.outerHeight;
-		void this.plugin.saveSettings();
-	}
 }
