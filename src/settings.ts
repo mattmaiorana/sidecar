@@ -50,10 +50,10 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Hide pop-out icons")
+			.setName("Hide pop-out icon")
 			.setDesc(
-				"Disable pop-out mode — notes will stay open in the main window " +
-				"when opened in Sidecar, and the pop-in button will be hidden."
+				"Hide the open-in-Sidecar button from the ribbon and note toolbars. " +
+				"The command palette and right-click menu still work."
 			)
 			.addToggle((toggle) =>
 				toggle
@@ -61,6 +61,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.hidePopOut = value;
 						await this.plugin.saveSettings();
+						this.plugin.updateOpenIconStyle();
 					})
 			);
 	}

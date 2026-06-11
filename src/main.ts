@@ -38,7 +38,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 				return;
 			}
 			void this.windowManager.open(file);
-		});
+		}).addClass("sidecar-open-btn");
 
 		// When the user closes the popout, persist its final bounds and let the
 		// manager forget the leaf so the next open spawns a fresh window.
@@ -83,10 +83,11 @@ export default class SidecarBrowserPlugin extends Plugin {
 				view.addAction("arrow-up-right", "Open in Sidecar", () => {
 					const file = view.file;
 					if (file) void this.windowManager.open(file);
-				});
+				}).addClass("sidecar-open-btn");
 			})
 		);
 
+		this.updateOpenIconStyle();
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
 	}
 
@@ -94,6 +95,18 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// Reverse every mark we made (styles, header bars, pins) and save the
 		// final window geometry. Leaves the popout windows open as plain popouts.
 		this.windowManager?.teardown();
+		document.getElementById("sidecar-open-icon-style")?.remove();
+	}
+
+	updateOpenIconStyle(): void {
+		const STYLE_ID = "sidecar-open-icon-style";
+		document.getElementById(STYLE_ID)?.remove();
+		if (this.settings.hidePopOut) {
+			const el = document.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = `.sidecar-open-btn { display: none !important; }`;
+			document.head.appendChild(el);
+		}
 	}
 
 	async loadSettings(): Promise<void> {
