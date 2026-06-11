@@ -316,6 +316,7 @@ export class SidecarWindowManager {
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
 		this.injectPopoutStyles(doc);
 		this.applyPinStyle(doc);
+		this.applyPopOutStyle(doc);
 	}
 
 	private applyPinStyle(doc: Document): void {
@@ -333,6 +334,24 @@ export class SidecarWindowManager {
 		for (const leaf of this.leaves) {
 			const doc = this.popoutDocFor(leaf);
 			if (doc) this.applyPinStyle(doc);
+		}
+	}
+
+	private applyPopOutStyle(doc: Document): void {
+		const STYLE_ID = "sidecar-popout-style";
+		doc.getElementById(STYLE_ID)?.remove();
+		if (this.plugin.settings.hidePopOut) {
+			const el = doc.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = `.sidecar-popin-btn { display: none !important; }`;
+			doc.head.appendChild(el);
+		}
+	}
+
+	updatePopOutStyle(): void {
+		for (const leaf of this.leaves) {
+			const doc = this.popoutDocFor(leaf);
+			if (doc) this.applyPopOutStyle(doc);
 		}
 	}
 

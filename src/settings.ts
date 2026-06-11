@@ -63,6 +63,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 						this.plugin.settings.hidePopOut = value;
 						await this.plugin.saveSettings();
 						this.plugin.updateOpenIconStyle();
+						this.plugin.windowManager.updatePopOutStyle();
 					})
 			);
 	}
