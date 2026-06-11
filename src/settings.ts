@@ -45,34 +45,50 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Default width")
+			.setName("Sidecar width")
 			.setDesc("Width of new Sidecar windows in pixels.")
 			.addText((text) =>
 				text
-					.setValue(String(this.plugin.settings.defaultWidth))
-					.setPlaceholder("375")
+					.setValue(
+						this.plugin.settings.defaultWidth !== DEFAULT_SETTINGS.defaultWidth
+							? String(this.plugin.settings.defaultWidth)
+							: ""
+					)
+					.setPlaceholder("Default: 375")
 					.onChange(async (value) => {
-						const n = parseInt(value, 10);
-						if (!isNaN(n) && n >= 100 && n <= 2000) {
-							this.plugin.settings.defaultWidth = n;
-							await this.plugin.saveSettings();
+						if (value === "") {
+							this.plugin.settings.defaultWidth = DEFAULT_SETTINGS.defaultWidth;
+						} else {
+							const n = parseInt(value, 10);
+							if (!isNaN(n) && n >= 100 && n <= 2000) {
+								this.plugin.settings.defaultWidth = n;
+							}
 						}
+						await this.plugin.saveSettings();
 					})
 			);
 
 		new Setting(containerEl)
-			.setName("Default height")
+			.setName("Sidecar height")
 			.setDesc("Height of new Sidecar windows in pixels. Updated automatically when you resize a Sidecar.")
 			.addText((text) =>
 				text
-					.setValue(String(this.plugin.settings.windowHeight))
-					.setPlaceholder("1000")
+					.setValue(
+						this.plugin.settings.windowHeight !== DEFAULT_SETTINGS.windowHeight
+							? String(this.plugin.settings.windowHeight)
+							: ""
+					)
+					.setPlaceholder("Default: 1000")
 					.onChange(async (value) => {
-						const n = parseInt(value, 10);
-						if (!isNaN(n) && n >= 100 && n <= 4000) {
-							this.plugin.settings.windowHeight = n;
-							await this.plugin.saveSettings();
+						if (value === "") {
+							this.plugin.settings.windowHeight = DEFAULT_SETTINGS.windowHeight;
+						} else {
+							const n = parseInt(value, 10);
+							if (!isNaN(n) && n >= 100 && n <= 4000) {
+								this.plugin.settings.windowHeight = n;
+							}
 						}
+						await this.plugin.saveSettings();
 					})
 			);
 
