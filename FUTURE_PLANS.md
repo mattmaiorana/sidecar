@@ -5,6 +5,13 @@ these without a conscious decision to expand scope.
 
 ---
 
+## Up next
+
+- **Set up GitHub repo** — create the remote, push the current branch, and then
+  submit to the Obsidian community plugins list.
+
+---
+
 ## Folder-listing browser view
 
 `ProjectBrowserView` was implemented and then removed in the v1 simplification
