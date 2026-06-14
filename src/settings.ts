@@ -47,7 +47,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Sidecar Window")
+			.setName("Sidecar")
 			.setHeading()
 			.setDesc(
 				"Opens notes in a tall, narrow popout window alongside your main Obsidian window."
