@@ -27,6 +27,13 @@ list live. Options for later:
 
 ## Internal-link → Sidecar opener
 
+**Partly realized** by the **default note** feature (1.1.0): a hand-maintained
+index note of `[[links]]`, opened as a Sidecar via hotkey/ribbon/home button, is
+now the durable "project launcher." You navigate *within* that one Sidecar using
+its back/forward and home buttons rather than spawning a new window per link.
+What's still unbuilt is making an individual internal-link click open the target
+in a *separate* Sidecar window.
+
 The user wants to be able to click an Obsidian internal link and have the target
 note open in a new Sidecar window instead of the main editor. This would allow
 a note to act as a project launcher: a list of `[[Project Note]]` links, each

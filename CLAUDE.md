@@ -1,14 +1,22 @@
-# CLAUDE.md — Sidecar Window
+# CLAUDE.md — Sidecar
 
 Context for future Claude Code sessions. Read this before changing anything so
 you don't re-derive decisions that are already locked.
+
+The plugin is named **Sidecar** (`manifest.json` id `sidecar`, vault folder
+`.obsidian/plugins/sidecar/`). It was previously "Sidecar Window"
+(id `sidecar-window`) and before that "Sidecar Browser"; class names and many
+internal identifiers still carry the `SidecarBrowser*` / `sidecar-*` prefixes —
+that's intentional, not a rename to chase.
 
 ## What this is
 
 An Obsidian plugin (`isDesktopOnly: true`) that opens a tall, narrow **popout
 window** acting as a portable mini-Obsidian for project notes, while the main
 window stays untouched. Same Obsidian instance, second window — no separate app,
-no syncing.
+no syncing. The intended workflow is a hand-maintained "index" note full of
+`[[links]]` that you open as a Sidecar (via the **default note**) and navigate
+from — a durable replacement for the deleted folder-browser view.
 
 ## Locked architecture decisions — do not re-derive
 
@@ -22,21 +30,40 @@ no syncing.
    (`leaf.openFile(file)`), so the user keeps live preview, their theme, and
    their other plugins. Do **not** embed a textarea or a standalone CodeMirror.
 
-3. **Entry points:**
-   - Command "Open current note in Sidecar" / ribbon button (`arrow-up-right`) → opens the active file.
-   - Right-click `.md` file in file tree → "Open in Sidecar".
-   - `arrow-up-right` action button injected into every main-window `MarkdownView`
-     toolbar (via `active-leaf-change`, guarded to skip popout leaves).
-   All four call `windowManager.open(file)`, which closes any main-window copy of
+3. **Entry points.** Two notes can be targeted: the **active** note and the
+   configured **default** note (`settings.defaultNote`).
+   - *Active note:* command "Open current note in Sidecar"; ribbon button
+     (`square-arrow-up-right`); right-click `.md` in file tree → "Open in
+     Sidecar"; `square-arrow-up-right` action button injected into every
+     main-window `MarkdownView` toolbar (via `active-leaf-change`, guarded to
+     skip popout leaves).
+   - *Default note:* command "Open default note in Sidecar" (bound by default to
+     **`Mod+Shift+S`**); ribbon button (`file-text`). `openDefaultNote()` opens
+     `settings.defaultNote` if set and resolvable, else **falls back to the
+     active note** (so the hotkey is never a dead end); a missing configured path
+     shows a Notice.
+   All paths call `windowManager.open(file)`, which closes any main-window copy of
    the file first (pop-out mode) and then creates a fresh popout window.
 
-4. **Minimal custom chrome, popout-scoped.** The Sidecar header is a narrow bar
-   containing the macOS traffic-light drag inset, a pop-in button (`arrow-down-left`,
-   returns the note to the main window), and a pin button (`pin`, always-on-top
-   toggle) at the right edge. Obsidian's native tab strip and per-view header are
-   hidden; the note's own inline title and content fill the rest. `sidecar-*` class
-   names are used so other plugins don't interfere.
+4. **Minimal custom chrome, popout-scoped.** The Sidecar header is a narrow bar.
+   Left side: the macOS traffic-light drag inset, then back/forward buttons
+   (`arrow-left` / `arrow-right`). Right side (after a flex spacer): home
+   (`file-text`, → default note), pop-in (`arrow-down-left`, → main window), pin
+   (`pin`, always-on-top). Obsidian's native tab strip and per-view header are
+   hidden; the note's own inline title and content fill the rest. `sidecar-*`
+   class names are used so other plugins don't interfere.
    - The bar (`decorateHeader`) is injected as the first child of `view.containerEl`.
+   - **Per-button visibility** is controlled by per-document `<style>` tags
+     (`applyPinStyle`, `applyPopInStyle`, `applyNavStyle`, `applyHomeStyle`),
+     each toggled live from settings via an `update*Style()` method that loops
+     open leaves. Back/forward and home default **off**; pop-in and pin default
+     **on**.
+   - **Back/forward** (`navigate()`) set the leaf active (`setActiveLeaf`, no
+     focus) then fire the built-in `app:go-back` / `app:go-forward` commands so
+     they target the Sidecar's leaf. There is no public `WorkspaceLeaf.goBack()`.
+   - **Home** (`goHome()`) calls `leaf.openFile()` on the default note *in place*
+     (navigates the existing Sidecar, unlike the ribbon/command which spawn a new
+     window).
    - **All popout CSS is injected directly into the popout's `<head>`** (see
      `injectPopoutStyles` in `window-manager.ts`) — this is the *single source of
      truth* for Sidecar styling. The rules are **not** scoped to a body class, so
@@ -80,6 +107,24 @@ no syncing.
    no leftover styling or stuck always-on-top state. It does **not** save any
    bounds — there is nothing to save (see #6).
 
+9. **Full-width content — surgical override, NOT the shared variable.** To make
+   note content fill the narrow window instead of centering at the readable line
+   width, we override the two sizer elements directly:
+   `.markdown-source-view.is-readable-line-width .cm-sizer` and the preview
+   `.markdown-preview-sizer` get `max-width: none !important; margin-inline: 0`.
+   **Do not** set Obsidian's `--file-line-width` variable to do this. It is a
+   *shared* variable: the `[[link]]` suggestion popup reads it for positioning.
+   Setting it to `100%` made the popup grow off-screen by a step per keystroke;
+   setting it to `9999px` only worked by luck. The surgical override touches
+   nothing else. (History: both bugs happened in this exact spot.)
+
+10. **Suggestion popup is capped.** Independently, `.suggestion-container` is
+    capped at `max-width: calc(100vw - 20px)` with ellipsis on `.suggestion-item`.
+    Without it, long note titles make the popup wider than the 375px window;
+    Obsidian then anchors the popup's right edge in view and shoves the left edge
+    (the titles) off-screen. The cap is defense-in-depth even with decision #9 in
+    place — keep it.
+
 ## API correctness
 
 The installed `obsidian` package's TypeScript definitions
@@ -96,15 +141,25 @@ names. Key APIs this plugin depends on:
 - `View.containerEl` (we inject our bar here); `setIcon(parent, iconId)`.
 - `Plugin.registerDomEvent` (has a `Window` overload), `registerEvent`;
   `workspace.on('window-close', ...)`, `workspace.on('window-open', ...)`.
+- `Plugin.addCommand({ hotkeys })` for the default `Mod+Shift+S` binding.
+- `AbstractInputSuggest<T>` for the default-note path autocomplete in settings.
+  **Gotcha:** the right API is `getSuggestions` + `renderSuggestion` + the
+  instance method `onSelect(cb)`. There is **no** `onChooseSuggestion` override
+  here (that's `SuggestModal`); an override by that name is silently dead code.
+  Call `suggest.close()` inside the `onSelect` callback or the dropdown lingers
+  after a pick.
 
 ## File layout
 
 ```
 manifest.json       plugin metadata (id, isDesktopOnly)
-src/main.ts         Plugin entry: load settings, commands, ribbon, event wiring.
-src/window-manager.ts  Manages all popout windows: open, mark, header, pin,
-                    sizing, teardown. Owns the injected popout CSS.
-src/settings.ts     Settings interface, defaults, settings tab.
+src/main.ts         Plugin entry: load settings, commands (incl. default-note +
+                    hotkey), both ribbon buttons, event wiring, openDefaultNote().
+src/window-manager.ts  Manages all popout windows: open, mark, header (nav/home/
+                    pop-in/pin buttons), navigate/goHome, sizing, teardown. Owns
+                    the injected popout CSS. Holds the SIDECAR_BUILD stamp.
+src/settings.ts     Settings interface, defaults, settings tab, FileSuggest
+                    (default-note path autocomplete).
 ```
 
 There is no `styles.css` — all popout CSS lives in `injectPopoutStyles`
@@ -121,8 +176,13 @@ npm run typecheck  # tsc -noEmit only — must pass clean
 Build output `main.js` is git-ignored. **Work only inside this repo** — do not
 write into any Obsidian vault from a session. The user copies the build outputs
 (`main.js` + `manifest.json` — there is no `styles.css`) into their vault's
-`.obsidian/plugins/obsidian-sidecar-window/` folder themselves and reloads the
-plugin in Obsidian (Cmd+P → "Reload app without saving", or toggle it off/on).
+`.obsidian/plugins/sidecar/` folder themselves and reloads the plugin in Obsidian
+(Cmd+P → "Reload app without saving", or toggle it off/on).
+
+`SIDECAR_BUILD` in `window-manager.ts` is stamped onto `body.dataset.sidecarBuild`
+in each popout — bump it when shipping a change so the user can confirm the live
+build in the popout inspector (`document.body.dataset.sidecarBuild`). Keep it in
+sync with `manifest.json` / `package.json` `version`.
 
 ## Conventions
 

@@ -7,7 +7,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 /** id of the <style> element we inject into each popout's <head>. */
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
-export const SIDECAR_BUILD = "1.0.3";
+export const SIDECAR_BUILD = "1.1.0";
 
 
 /**
@@ -174,6 +174,15 @@ export class SidecarWindowManager {
 
 		bar.createDiv({ cls: "sidecar-bar-spacer" });
 
+		const homeBtn = bar.createEl("button", {
+			cls: "sidecar-home-btn clickable-icon",
+			attr: { "aria-label": "Go to default note" },
+		});
+		setIcon(homeBtn, "file-text");
+		this.plugin.registerDomEvent(homeBtn, "click", () => {
+			void this.goHome(leaf);
+		});
+
 		const popInBtn = bar.createEl("button", {
 			cls: "sidecar-popin-btn clickable-icon",
 			attr: { "aria-label": "Return to main window" },
@@ -322,12 +331,13 @@ export class SidecarWindowManager {
 		this.applyPinStyle(doc);
 		this.applyPopInStyle(doc);
 		this.applyNavStyle(doc);
+		this.applyHomeStyle(doc);
 	}
 
 	private applyPinStyle(doc: Document): void {
 		const STYLE_ID = "sidecar-pin-style";
 		doc.getElementById(STYLE_ID)?.remove();
-		if (this.plugin.settings.hidePinButton) {
+		if (!this.plugin.settings.showPinButton) {
 			const el = doc.createElement("style");
 			el.id = STYLE_ID;
 			el.textContent = `.sidecar-pin-btn { display: none !important; }`;
@@ -345,7 +355,7 @@ export class SidecarWindowManager {
 	private applyPopInStyle(doc: Document): void {
 		const STYLE_ID = "sidecar-popin-style";
 		doc.getElementById(STYLE_ID)?.remove();
-		if (this.plugin.settings.hidePopInButton) {
+		if (!this.plugin.settings.showPopInButton) {
 			const el = doc.createElement("style");
 			el.id = STYLE_ID;
 			el.textContent = `.sidecar-popin-btn { display: none !important; }`;
@@ -376,6 +386,32 @@ export class SidecarWindowManager {
 			const doc = this.popoutDocFor(leaf);
 			if (doc) this.applyNavStyle(doc);
 		}
+	}
+
+	private applyHomeStyle(doc: Document): void {
+		const STYLE_ID = "sidecar-home-style";
+		doc.getElementById(STYLE_ID)?.remove();
+		if (!this.plugin.settings.showHomeButton) {
+			const el = doc.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = `.sidecar-home-btn { display: none !important; }`;
+			doc.head.appendChild(el);
+		}
+	}
+
+	updateHomeStyle(): void {
+		for (const leaf of this.leaves) {
+			const doc = this.popoutDocFor(leaf);
+			if (doc) this.applyHomeStyle(doc);
+		}
+	}
+
+	private async goHome(leaf: WorkspaceLeaf): Promise<void> {
+		const path = this.plugin.settings.defaultNote.trim();
+		if (!path) return;
+		const abstract = this.plugin.app.vault.getAbstractFileByPath(path);
+		if (!(abstract instanceof TFile)) return;
+		await leaf.openFile(abstract);
 	}
 
 	private navigate(leaf: WorkspaceLeaf, direction: "back" | "forward"): void {
@@ -409,13 +445,21 @@ export class SidecarWindowManager {
 :root {
   --sidecar-traffic-inset: 76px;
   --sidecar-bar-height: 40px;
-  --file-line-width: 100%;
 }
 .workspace-tab-header-container { display: none !important; }
 .view-header { display: none !important; }
 .status-bar, .workspace-ribbon { display: none !important; }
 .workspace-leaf-content { display: flex; flex-direction: column; }
 .view-content { flex: 1 1 auto; min-height: 0; }
+/* Make note content fill the narrow window instead of being centered at the
+   readable line width. Surgical override of the two sizer elements only — we
+   deliberately avoid touching Obsidian's shared --file-line-width variable,
+   which other features (e.g. the link-suggestion popup) also read. */
+.markdown-source-view.is-readable-line-width .cm-sizer,
+.markdown-preview-view.is-readable-line-width .markdown-preview-sizer {
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
 .sidecar-bar {
   -webkit-app-region: drag;
   flex: 0 0 auto;
@@ -433,6 +477,12 @@ export class SidecarWindowManager {
   opacity: var(--icon-opacity);
 }
 .sidecar-nav-btn:hover { opacity: 1; }
+.sidecar-home-btn {
+  -webkit-app-region: no-drag;
+  color: var(--icon-color);
+  opacity: var(--icon-opacity);
+}
+.sidecar-home-btn:hover { opacity: 1; }
 .sidecar-pin-btn {
   -webkit-app-region: no-drag;
   color: var(--icon-color);
@@ -440,10 +490,18 @@ export class SidecarWindowManager {
 }
 .sidecar-pin-btn:hover { opacity: 1; }
 .sidecar-pin-btn.is-active { color: var(--interactive-accent); opacity: 1; }
-.markdown-source-view.is-readable-line-width .cm-sizer,
-.markdown-preview-view.is-readable-line-width .markdown-preview-sizer {
-  max-width: none !important;
-  margin-inline: 0 !important;
+/* Keep the [[link]] / command suggestion popup inside the narrow window.
+   Without a cap the popup grows to its content width, overflows the window,
+   and Obsidian anchors its right edge in view — shoving the left edge (and the
+   note titles) off-screen. Capping the width lets Obsidian's own positioning
+   keep the whole popup visible. */
+.suggestion-container {
+  max-width: calc(100vw - 20px) !important;
+}
+.suggestion-container .suggestion-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 ${smallerPadding ? `.markdown-source-view .cm-scroller,
 .markdown-preview-view { padding: 16px 24px !important; }` : ""}

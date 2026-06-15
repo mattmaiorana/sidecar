@@ -30,6 +30,15 @@ export default class SidecarBrowserPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "open-default-note-in-sidecar",
+			name: "Open default note in Sidecar",
+			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "S" }],
+			callback: () => {
+				void this.openDefaultNote();
+			},
+		});
+
 		// Optional ribbon shortcut for the same command.
 		this.addRibbonIcon("square-arrow-up-right", "Open current note in Sidecar", () => {
 			const file = this.app.workspace.getActiveFile();
@@ -39,6 +48,10 @@ export default class SidecarBrowserPlugin extends Plugin {
 			}
 			void this.windowManager.open(file);
 		}).addClass("sidecar-ribbon-btn");
+
+		this.addRibbonIcon("file-text", "Open default note in Sidecar", () => {
+			void this.openDefaultNote();
+		}).addClass("sidecar-home-ribbon-btn");
 
 		// When the user closes the popout, persist its final bounds and let the
 		// manager forget the leaf so the next open spawns a fresh window.
@@ -88,6 +101,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 		);
 
 		this.updateRibbonStyle();
+		this.updateHomeRibbonStyle();
 		this.updateToolbarStyle();
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
 	}
@@ -97,13 +111,45 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// popout windows open as plain popouts.
 		this.windowManager?.teardown();
 		document.getElementById("sidecar-ribbon-style")?.remove();
+		document.getElementById("sidecar-home-ribbon-style")?.remove();
 		document.getElementById("sidecar-toolbar-style")?.remove();
+	}
+
+	async openDefaultNote(): Promise<void> {
+		const path = this.settings.defaultNote.trim();
+		if (path) {
+			const abstract = this.app.vault.getAbstractFileByPath(path);
+			if (abstract instanceof TFile) {
+				await this.windowManager.open(abstract);
+				return;
+			}
+			new Notice(`Default note not found: ${path}`);
+			return;
+		}
+		// No default configured — fall back to opening the active note.
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("Open a note first, or configure a default note in Sidecar settings.");
+			return;
+		}
+		await this.windowManager.open(file);
+	}
+
+	updateHomeRibbonStyle(): void {
+		const STYLE_ID = "sidecar-home-ribbon-style";
+		document.getElementById(STYLE_ID)?.remove();
+		if (!this.settings.showHomeRibbonButton) {
+			const el = document.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = `.sidecar-home-ribbon-btn { display: none !important; }`;
+			document.head.appendChild(el);
+		}
 	}
 
 	updateRibbonStyle(): void {
 		const STYLE_ID = "sidecar-ribbon-style";
 		document.getElementById(STYLE_ID)?.remove();
-		if (this.settings.hideRibbonButton) {
+		if (!this.settings.showRibbonButton) {
 			const el = document.createElement("style");
 			el.id = STYLE_ID;
 			el.textContent = `.sidecar-ribbon-btn { display: none !important; }`;
@@ -114,7 +160,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 	updateToolbarStyle(): void {
 		const STYLE_ID = "sidecar-toolbar-style";
 		document.getElementById(STYLE_ID)?.remove();
-		if (this.settings.hideToolbarButton) {
+		if (!this.settings.showToolbarButton) {
 			const el = document.createElement("style");
 			el.id = STYLE_ID;
 			el.textContent = `.sidecar-toolbar-btn { display: none !important; }`;

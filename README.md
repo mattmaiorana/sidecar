@@ -1,4 +1,4 @@
-# Sidecar Window
+# Sidecar
 
 An Obsidian plugin that opens a note in a **tall, narrow popout window** — a
 portable mini-Obsidian you can park next to your web browser — while the main
@@ -9,10 +9,18 @@ separate app, no syncing. Window creation uses Obsidian's own popout API (the
 same mechanism behind "Open in new window"); the plugin's job is to give that
 window a clean, narrow, minimal look and a sensible default size and position.
 
+A nice way to use it: keep a hand-maintained **index note** full of `[[links]]`
+to your projects, set it as the **default note**, and open it in a Sidecar with
+one keystroke. The Sidecar becomes a durable, self-curated project browser you
+navigate with the back/forward and home buttons.
+
 ## How it works
 
-- Open any note in a Sidecar via a command, the ribbon icon, a file-tree
+- Open a note in a Sidecar via a command, a ribbon icon, a file-tree
   right-click, or the action button in any note's toolbar.
+- There are **two targets**: the **current** note (whatever's active) and a
+  configurable **default note**. The default note has its own command, hotkey,
+  and ribbon button — open your index from anywhere with one keystroke.
 - Opening a note that's already open in the main window **closes the main-window
   copy first** (pop-out mode), so you're never looking at two copies of the same
   note at once.
@@ -21,10 +29,14 @@ window a clean, narrow, minimal look and a sensible default size and position.
 - In the popout **only**, the native chrome (tab bar, view header, status bar,
   ribbon) is hidden and replaced with a minimal top bar. Your main window is
   never affected.
-- A **pop-in button** in the Sidecar's top bar returns the note to a new tab in
-  the main window and closes the Sidecar.
-- A **pin button** in the top bar keeps the window above all other apps (handy
-  next to a browser). Available when Obsidian's Electron remote API is reachable.
+- The top bar can show, depending on your settings:
+  - **Back / forward** buttons to move through the note's navigation history —
+    handy when you click a `[[link]]` and want to get back.
+  - A **home button** that returns the Sidecar to your default note.
+  - A **pop-in button** that returns the note to a new tab in the main window and
+    closes the Sidecar.
+  - A **pin button** that keeps the window above all other apps (handy next to a
+    browser). Available when Obsidian's Electron remote API is reachable.
 - Open **as many Sidecars as you like** — each is independent.
 - The window opens at a configurable width and height (both set in settings),
   offset from your main window's top-right corner. Resizing a Sidecar by hand
@@ -37,12 +49,16 @@ window a clean, narrow, minimal look and a sensible default size and position.
 |---|---|---|
 | Sidecar width | 375 px | Width of new Sidecar windows. Valid range: 200–1200 px. |
 | Sidecar height | 1000 px | Height of new Sidecar windows. Valid range: 300–3000 px. |
+| Default note | *(empty)* | Path (vault-relative) opened by the default-note command, hotkey, ribbon button, and the home button. Type to autocomplete from your notes. Empty = those actions fall back to the current note. |
 | Make text smaller | On | Scales note content to 14 px. Inline title: 18 px. Headings scale from h1 (18 px) down to h4–h6 (14 px). Code blocks and inline code: 13 px. Callout titles and properties panel: 14 px. |
 | Make padding smaller | On | Tightens the note's content padding for a denser column feel. |
-| Hide ribbon button | Off | Hides the open-in-Sidecar button from Obsidian's left ribbon. |
-| Hide toolbar button | Off | Hides the open-in-Sidecar button from each note's editor toolbar. The command palette and file-tree right-click still work. |
-| Hide pop-in button | Off | Hides the return-to-main-window button from the Sidecar bar. |
-| Hide pin button | Off | Hides the always-on-top pin button from the Sidecar bar. |
+| Show 'open current note' ribbon button | On | The `square-arrow-up-right` ribbon button that opens the active note. |
+| Show 'open default note' ribbon button | On | The `file-text` ribbon button that opens the default note. |
+| Show toolbar button | On | The open-in-Sidecar button on each note's editor toolbar. The command palette and file-tree right-click still work. |
+| Show pop-in button | On | The return-to-main-window button in the Sidecar bar. |
+| Show pin button | On | The always-on-top pin button in the Sidecar bar. |
+| Show back and forward buttons | Off | Navigation buttons in the Sidecar bar for the note history. |
+| Show home button | Off | A button in the Sidecar bar that returns to the default note. |
 
 Leaving a width or height field empty resets it to the default.
 
@@ -52,25 +68,35 @@ This plugin isn't in the community store. To run it from source:
 
 1. Build it (see [Development](#development)) so `main.js` exists.
 2. Copy `main.js` and `manifest.json` into your vault at:
-   `<your vault>/.obsidian/plugins/obsidian-sidecar-window/`
+   `<your vault>/.obsidian/plugins/sidecar/`
    (there is no `styles.css` — all styling is injected at runtime).
 3. In Obsidian: **Settings → Community plugins**, make sure *Restricted mode* is
-   off, then enable **Sidecar Window**.
+   off, then enable **Sidecar**.
 
 ## Use
 
-Open a note in a Sidecar any of these ways:
+Open the **current** note in a Sidecar any of these ways:
 
 - The command **"Open current note in Sidecar"** (command palette).
-- The **ribbon icon** (`arrow-up-right`) in Obsidian's left ribbon.
+- The **ribbon icon** (`square-arrow-up-right`) in Obsidian's left ribbon.
 - **Right-click a `.md` file** in the file tree → "Open in Sidecar".
-- The **action button** (`arrow-up-right`) in any note's editor toolbar.
+- The **action button** (`square-arrow-up-right`) in any note's editor toolbar.
 
-From the Sidecar:
+Open your **default** note in a Sidecar:
 
-- Click the **pop-in button** (`arrow-down-left`) to return the note to a new
-  tab in the main window and close the Sidecar.
-- Click the **pin icon** to toggle always-on-top.
+- The command **"Open default note in Sidecar"** — bound by default to
+  **`Cmd/Ctrl+Shift+S`** (rebindable in Obsidian's Hotkeys settings).
+- The **ribbon icon** (`file-text`) in Obsidian's left ribbon.
+
+If no default note is configured, both fall back to opening the current note.
+
+From the Sidecar (buttons appear per your settings):
+
+- **Back / forward** (`arrow-left` / `arrow-right`) to walk the note history.
+- The **home button** (`file-text`) to jump back to your default note.
+- The **pop-in button** (`arrow-down-left`) to return the note to a new tab in
+  the main window and close the Sidecar.
+- The **pin icon** to toggle always-on-top.
 
 ## Development
 
@@ -83,8 +109,10 @@ npm run typecheck  # type-check only
 
 The build output is `main.js` in the repo root (git-ignored). For live testing,
 copy `main.js` and `manifest.json` into your vault's
-`.obsidian/plugins/obsidian-sidecar-window/` folder and reload the plugin in
-Obsidian (Cmd+P → "Reload app without saving") after each rebuild.
+`.obsidian/plugins/sidecar/` folder and reload the plugin in Obsidian
+(Cmd+P → "Reload app without saving") after each rebuild. You can confirm the
+live build by opening the popout's developer console and reading
+`document.body.dataset.sidecarBuild`.
 
 `isDesktopOnly: true` — popout windows are a desktop-only feature.
 

@@ -1,7 +1,51 @@
 # Changelog
 
-All notable changes to Sidecar Window are documented here.
+All notable changes to Sidecar are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
+
+---
+
+## [1.1.0]
+
+A feature release — adds the default note and in-Sidecar navigation. Bundles all
+the work since 1.0.3. (Build numbers 1.0.4–1.0.6 were intermediate test builds,
+never released on their own — `SIDECAR_BUILD` is stamped on the popout body for
+live verification during development.)
+
+### Added
+- **Default note** — a configurable note (set its vault-relative path in
+  settings, with type-ahead autocomplete) that can be opened in a Sidecar
+  independently of whatever note is active. Backed by:
+  - a **"Open default note in Sidecar"** command, bound by default to
+    **`Cmd/Ctrl+Shift+S`** (rebindable in Obsidian's Hotkeys settings);
+  - a second **ribbon button** (`file-text`);
+  - a **home button** in the Sidecar bar (off by default) that returns the open
+    Sidecar to the default note in place.
+  - If no default note is configured, the command/hotkey/ribbon fall back to
+    opening the current note.
+- **Back / forward navigation buttons** in the Sidecar bar (off by default) — fire
+  the built-in `app:go-back` / `app:go-forward` scoped to the Sidecar's leaf, so
+  clicking a `[[link]]` inside a Sidecar no longer strands you.
+
+### Changed
+- **Renamed the plugin to "Sidecar"** (was "Sidecar Window"). The `manifest.json`
+  id is now `sidecar` (was `obsidian-sidecar-window`, briefly `sidecar-window`).
+  **Rename the vault plugin folder to `sidecar`** and re-enable. *Note: the id
+  change resets settings to defaults — re-apply any customized toggles.*
+- **Button-visibility settings are now "Show" toggles, all sensible-default.**
+  The old "Hide …" toggles (ribbon, toolbar, pop-in, pin) became "Show …" toggles
+  (default on). The two ribbon buttons have separate toggles.
+- **Icons** — open-in-Sidecar buttons use `square-arrow-up-right`, pop-in uses
+  `square-arrow-down-left`, and the default-note/home buttons use `file-text`.
+
+### Fixed
+- **`[[link]]` suggestion popup** no longer drifts off-screen / grows per keystroke
+  in the narrow window. Root cause: the previous full-width-content rule set
+  Obsidian's shared `--file-line-width` variable, which the popup also reads. The
+  fix overrides the editor sizer elements directly instead, and caps
+  `.suggestion-container` width so it always fits the window.
+- **Default-note path autocomplete** now applies a clicked/Enter-selected
+  suggestion and closes the dropdown (the suggestion handler used the wrong API).
 
 ---
 
