@@ -5,10 +5,58 @@ these without a conscious decision to expand scope.
 
 ---
 
-## Up next
+## Up next — ship to GitHub + Obsidian community list
 
-- **Set up GitHub repo** — create the remote, push the current branch, and then
-  submit to the Obsidian community plugins list.
+Concrete, ordered plan for publishing v1.1.0. **Paused before Phase B** at the
+user's request (2026-06-14) — no remote, push, release, or PR exists yet.
+
+### Pre-flight state (done 2026-06-14)
+- Added `LICENSE` (MIT, Matt Maiorana, 2026) — Obsidian review expects a license
+  file; `package.json` already declared MIT but no file existed.
+- Renamed `package.json` `"name"` → `obsidian-sidecar` (Obsidian ignores this
+  field; it just matches the folder/repo now).
+
+### Environment facts (verified 2026-06-14)
+- `gh` authed as **mattmaiorana** with `repo` + `workflow` scopes — enough to
+  create the repo, push, and cut a release.
+- `main` is the branch; clean. No `origin` remote yet. No git tags yet.
+- Submission assets present: `manifest.json` (id `sidecar`, version `1.1.0`,
+  minAppVersion `1.5.0`, `isDesktopOnly`), `versions.json`, `README.md`,
+  `CHANGELOG.md`, and now `LICENSE`. There is **no `styles.css`** (by design).
+- Plugin **id `sidecar` is free** in the community list (checked the 4,770-entry
+  `obsidianmd/obsidian-releases/community-plugins.json` — no exact `id` match).
+  The *name* "Sidecar" is somewhat generic (≈5 other "sidecar-ish" plugins by
+  name), so reviewers could nudge on it, but it's submittable as-is.
+
+### Phase B — create the GitHub repo (outward-facing)
+```
+gh repo create mattmaiorana/obsidian-sidecar --public --source=. --remote=origin --push
+```
+Creates `origin`, pushes `main`. Must be **public** for community submission.
+
+### Phase C — cut the 1.1.0 release (required before the community PR validates)
+1. `npm run build` → produces `main.js` (git-ignored; built fresh each release).
+2. ```
+   gh release create 1.1.0 main.js manifest.json --title "1.1.0" --notes-file CHANGELOG.md
+   ```
+   - Tag **must equal the manifest version exactly** — `1.1.0`, **no `v` prefix**.
+   - Attach `main.js` + `manifest.json` as **individual binary assets** (the
+     community bot validates release assets, not the source tree). No
+     `styles.css` to attach.
+
+### Phase D — submit to the community plugins list (outward-facing PR)
+Fork `obsidianmd/obsidian-releases`, append to `community-plugins.json`, open a
+PR. Entry:
+```json
+{
+  "id": "sidecar",
+  "name": "Sidecar",
+  "author": "Matt Maiorana",
+  "description": "Opens a tall, narrow popout window that acts as a portable mini-Obsidian for navigating and editing project notes, while the main app stays untouched.",
+  "repo": "mattmaiorana/obsidian-sidecar"
+}
+```
+The PR triggers Obsidian's automated validation bot plus a manual review.
 
 ---
 
