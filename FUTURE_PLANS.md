@@ -44,9 +44,15 @@ Creates `origin`, pushes `main`. Must be **public** for community submission.
      community bot validates release assets, not the source tree). No
      `styles.css` to attach.
 
-### Phase D — submit to the community plugins list (outward-facing PR)
-Fork `obsidianmd/obsidian-releases`, append to `community-plugins.json`, open a
-PR. Entry:
+### Phase D — submit to the community plugins list
+**Process likely changed (per user, 2026-06-14):** Obsidian now reportedly lets
+you **link the GitHub repo** and an automated checker reads from it and handles
+the release once it passes — no manual fork/PR. **Confirm the current flow**
+(Obsidian developer docs / submission page) before doing anything below; the
+fork-and-PR steps are kept only as a fallback if the new flow isn't available.
+
+_Fallback (old flow):_ fork `obsidianmd/obsidian-releases`, append to
+`community-plugins.json`, open a PR. Entry:
 ```json
 {
   "id": "sidecar",
@@ -92,6 +98,43 @@ Avenues to explore:
 - A custom URI scheme or command palette entry that accepts a note path.
 - A special frontmatter tag (`sidecar: true`) that causes the link handler to redirect to Sidecar.
 - Context-menu "Open link in Sidecar" on internal links (similar to the existing file-tree right-click entry).
+
+## macOS menu-bar item / system-wide trigger
+
+Goal: open the **default note** in a Sidecar from *outside* Obsidian's window —
+ideally even when Obsidian isn't focused. Obsidian's own API can't do this; the
+only menu-bar-ish API it exposes is `addStatusBarItem()`, which is the bar
+*inside* the Obsidian window, not the macOS menu bar. The only route is to reach
+Electron directly — the **same `@electron/remote` door the pin button already
+uses** (`getRemoteModule()` in `window-manager.ts`, gated on reachability).
+
+Two viable mechanisms (treat as opt-in, remote-gated like the pin button):
+
+- **Status-bar item (top-right of the macOS menu bar): Electron `Tray`.** Best
+  fit for the "launch my index from anywhere" workflow — a persistent icon that
+  pops the default note into a Sidecar.
+  - `new remote.Tray(icon)` with a monochrome **template** `nativeImage`
+    (`setTemplateImage(true)`); click handler or small context menu → the same
+    `openDefaultNote()` path.
+  - **Hold a reference and `destroy()` it in `onunload`** — otherwise reloads
+    leave orphaned/duplicate icons.
+  - The click handler is a renderer function invoked from the main process via
+    `@electron/remote` — it works, but remote callbacks are a known rough edge.
+  - Only *acts* while Obsidian is running; it won't relaunch Obsidian if quit.
+
+- **System-wide hotkey: `remote.globalShortcut`.** Fires even when Obsidian is
+  unfocused (today's `Mod+Shift+S` only works when Obsidian has focus). No icon
+  to manage; lighter than a Tray. Pairs well *with* the Tray (icon for
+  discoverability, hotkey for speed). Must `unregister` on unload.
+
+- **Skip:** appending to Obsidian's own app menu (`Menu` / `setApplicationMenu`).
+  Obsidian owns and rebuilds that menu, so additions get clobbered — too fragile.
+
+**Caveats before building:** none of this is Obsidian's public API, so it's
+fragile across Obsidian/Electron updates; and it's a **community-review risk** —
+reviewers scrutinize `@electron/remote` / direct Electron use. The plugin already
+uses remote for pin, but a Tray/globalShortcut widens that surface, so this
+should ship as a **post-1.1.0** feature, *not* folded into the submission.
 
 ## Magnetic width snap
 
