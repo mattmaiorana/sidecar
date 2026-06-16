@@ -65,7 +65,7 @@ export class SidecarLauncherButtons {
 		el.textContent = `
 .sidecar-launcher-strip-btn.clickable-icon {
 	height: 100%;
-	padding: 0 var(--size-2-3);
+	padding: 0 8px;
 	border-radius: var(--tab-radius);
 	color: var(--icon-color);
 	opacity: var(--icon-opacity);
