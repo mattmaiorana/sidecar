@@ -55,9 +55,9 @@ export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	showToolbarButton: true,
 	showPopInButton: true,
 	showPinButton: true,
-	showNavButtons: false,
+	showNavButtons: true,
 	defaultNote: "",
-	showHomeButton: false,
+	showHomeButton: true,
 	reskinPopoutsOnReload: false,
 };
 
@@ -193,9 +193,9 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Re-skin popouts on reload")
+			.setName("Re-style popouts on reload")
 			.setDesc(
-				"After reloading Obsidian, re-apply Sidecar styling to restored popout windows (their size and position are left alone). Turn off if you use native popout windows you want left untouched."
+				"Re-apply Sidecar styling to popout windows after an Obsidian reload."
 			)
 			.addToggle((toggle) =>
 				toggle
