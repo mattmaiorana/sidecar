@@ -7,8 +7,11 @@ const STYLE_ID = "sidecar-launcher-strip-style";
 /**
  * Injects a one-click "open the default note in a Sidecar" button into the left
  * sidebar's tab-header strip (next to Files/Search), for users who keep the
- * ribbon hidden. Uses the `file-text` icon (the same as the default-note ribbon
- * button) and triggers `openDefaultNote()`.
+ * ribbon hidden. Triggers `openDefaultNote()`.
+ *
+ * The button is mounted *inside* `.workspace-tab-header-container-inner` (after
+ * the tabs) so it shares the tabs' exact vertical box — otherwise its hover
+ * highlight ends up a different height/position than the tabs beside it.
  *
  * This reaches into Obsidian's chrome DOM, which has no public API — so mounting
  * is defensive (bails if the strip is missing) and idempotent, and `mount()` is
@@ -24,35 +27,23 @@ export class SidecarLauncherButtons {
 
 	/** Mount the button if its target exists. Safe to call repeatedly. */
 	mount(): void {
-		const container = document.querySelector(
-			".workspace-split.mod-left-split .workspace-tab-header-container"
+		const inner = document.querySelector(
+			".workspace-split.mod-left-split .workspace-tab-header-container-inner"
 		);
-		if (!container) return;
+		if (!inner) return;
 		this.injectStyle();
 		if (!this.stripBtn) {
 			this.stripBtn = createDiv({
 				cls: "clickable-icon sidecar-launcher-strip-btn",
 				attr: { "aria-label": "Open default note in Sidecar" },
 			});
-			setIcon(this.stripBtn, "file-text");
+			setIcon(this.stripBtn, "square-arrow-out-up-right");
 			this.plugin.registerDomEvent(this.stripBtn, "click", () => {
 				void this.plugin.openDefaultNote();
 			});
 		}
-
-		// Sit just before the flex spacer, so the button lands in-line with the
-		// tab icons on the left rather than out by the collapse toggle on the
-		// right (where a plain append puts it).
-		const spacer = container.querySelector(
-			":scope > .workspace-tab-header-spacer"
-		);
-		if (spacer) {
-			if (this.stripBtn.nextElementSibling === spacer) return; // already placed
-			spacer.before(this.stripBtn);
-		} else {
-			if (this.stripBtn.parentElement === container) return;
-			container.appendChild(this.stripBtn);
-		}
+		if (this.stripBtn.parentElement === inner) return; // already placed
+		inner.appendChild(this.stripBtn);
 	}
 
 	/** Detach the button and its styles (called on unload). */
@@ -63,9 +54,9 @@ export class SidecarLauncherButtons {
 	}
 
 	/**
-	 * Match the resting/hover look of the tab strip's own icon buttons (new tab,
-	 * tab list, collapse) instead of the generic clickable-icon: a fainter icon
-	 * at the header icon size that brightens (with a hover background) on hover.
+	 * Style the button as a tab-strip icon: a faint icon at the header icon size
+	 * that brightens on hover, with a full-height pill highlight (var(--tab-radius))
+	 * matching the tab hover beside it.
 	 */
 	private injectStyle(): void {
 		if (document.getElementById(STYLE_ID)) return;
@@ -73,6 +64,9 @@ export class SidecarLauncherButtons {
 		el.id = STYLE_ID;
 		el.textContent = `
 .sidecar-launcher-strip-btn.clickable-icon {
+	height: 100%;
+	padding: 0 var(--size-2-3);
+	border-radius: var(--tab-radius);
 	color: var(--icon-color);
 	opacity: var(--icon-opacity);
 }
