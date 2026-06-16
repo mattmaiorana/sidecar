@@ -68,11 +68,10 @@ export class SidecarLauncherButtons {
 	}
 
 	/**
-	 * Style the button as a tab-strip icon: a faint icon at the header icon size
-	 * that brightens on hover, with a tab-radius pill highlight roughly matching
-	 * the tabs' (icon size + small vertical padding ≈ the tab pill height; 8px
-	 * sides to match `.workspace-tab-header-inner`). align-self keeps it from
-	 * stretching to the full strip height.
+	 * Match the sidebar tabs so the button reads as a natural 4th item: a 25px-tall
+	 * tab-radius pill, 8px sides and an 18px icon (→ 34×25, the measured tab-inner
+	 * box), a 2px left margin for the inter-tab gap, centered so it doesn't stretch
+	 * to the full strip height, faint by default and brightening on hover.
 	 */
 	private injectStyle(): void {
 		if (document.getElementById(STYLE_ID)) return;
@@ -81,7 +80,9 @@ export class SidecarLauncherButtons {
 		el.textContent = `
 .sidecar-launcher-strip-btn.clickable-icon {
 	align-self: center;
-	padding: var(--size-2-2) 8px;
+	height: 25px;
+	margin-left: var(--size-2-1);
+	padding: 0 8px;
 	border-radius: var(--tab-radius);
 	color: var(--icon-color);
 	opacity: var(--icon-opacity);
@@ -92,8 +93,8 @@ export class SidecarLauncherButtons {
 	background-color: var(--background-modifier-hover);
 }
 .sidecar-launcher-strip-btn.clickable-icon .svg-icon {
-	width: var(--icon-s);
-	height: var(--icon-s);
+	width: 18px;
+	height: 18px;
 }
 `;
 		document.head.appendChild(el);
