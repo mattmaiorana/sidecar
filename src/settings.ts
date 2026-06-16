@@ -39,6 +39,9 @@ export interface SidecarBrowserSettings {
 	defaultNote: string;
 	/** When true, a home button is shown in the Sidecar bar to return to the default note. */
 	showHomeButton: boolean;
+	/** When true, a button that opens the default note is injected into the left
+	 *  sidebar's tab bar (handy if the ribbon is hidden). */
+	showLauncherButton: boolean;
 	/** When true, every popout window restored after an Obsidian reload is
 	 *  re-skinned as a Sidecar. Safe to leave on if you only use popouts for
 	 *  Sidecars; turn off if you use native popout windows you want left alone. */
@@ -58,6 +61,7 @@ export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	showNavButtons: true,
 	defaultNote: "",
 	showHomeButton: true,
+	showLauncherButton: true,
 	reskinPopoutsOnReload: false,
 };
 
@@ -229,6 +233,19 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 						this.plugin.settings.showHomeRibbonButton = value;
 						await this.plugin.saveSettings();
 						this.plugin.updateHomeRibbonStyle();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show sidebar launcher button")
+			.setDesc("Show a button in the left sidebar's tab bar that opens the default note in a Sidecar (handy if you hide the ribbon).")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showLauncherButton)
+					.onChange(async (value) => {
+						this.plugin.settings.showLauncherButton = value;
+						await this.plugin.saveSettings();
+						this.plugin.launcherButtons.mount();
 					})
 			);
 

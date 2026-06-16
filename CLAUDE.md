@@ -146,7 +146,9 @@ from — a durable replacement for the deleted folder-browser view.
     `SidecarLauncherButtons` (`launcher-button.ts`) injects a one-click
     `file-text` button (→ `openDefaultNote()`) into the left sidebar's
     `.workspace-tab-header-container`, **immediately before
-    `.workspace-tab-header-spacer`**, for users who keep the ribbon hidden. There
+    `.workspace-tab-header-spacer`**, for users who keep the ribbon hidden.
+    Visibility is gated by `settings.showLauncherButton` (default on); toggling it
+    calls `launcherButtons.mount()`, which mounts or removes accordingly. There
     is **no public API** for this, so:
     - **Do not mount it inside `.workspace-tab-header-container-inner`.** Obsidian
       rebuilds that inner container's children when switching sidebar tabs, which
