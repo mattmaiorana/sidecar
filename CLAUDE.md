@@ -74,13 +74,26 @@ from — a durable replacement for the deleted folder-browser view.
    - **Drag region (macOS):** `-webkit-app-region: drag` on `.sidecar-bar` with
      left inset for traffic lights. Interactive controls are marked `no-drag`.
 
-5. **Only our windows are ever touched.** Styling and resizing happen exclusively
-   on windows opened via `open()`, gated by the `pendingPopout` flag in
-   `handleWindowOpen`. We do **not** adopt restored or user-created popouts — an
-   earlier `adoptRestoredSidecar()` did, and it hijacked the user's own native
-   "Open in new window" popouts (shrank them to 375px, stripped their chrome) on
-   every reload. It was removed. A Sidecar that survives a reload simply comes
-   back as a plain popout; reopen it to re-skin.
+5. **Only our windows are ever touched — restore re-skin is path-matched and
+   geometry-preserving.** Fresh styling/resizing happens exclusively on windows
+   opened via `open()`, gated by the `pendingPopout` flag in `handleWindowOpen`.
+   On reload, Obsidian restores Sidecar popouts as plain (unstyled) windows, and
+   `adoptRestoredSidecars()` (run at `onLayoutReady`, with a couple of retries to
+   catch late-restored popouts) **re-skins them**. It is the *safe* successor to
+   the removed `adoptRestoredSidecar()`, which hijacked the user's own native
+   "Open in new window" popouts (shrank them to 375px, stripped their chrome).
+   The safe version differs in two non-negotiable ways:
+   - **Path-matched, never blanket.** It adopts a restored popout only when the
+     note it shows is in `settings.sidecarPaths` — the set of notes that were in
+     open Sidecars, persisted via `persistSidecarPaths()` (called from `open()`,
+     `handleWindowClose()`, and the `file-open` event so it tracks in-Sidecar
+     navigation). An arbitrary/user-created popout is never touched. Residual
+     edge: the *same* note also open in a user's own popout would be adopted too.
+   - **Geometry preserved.** Adoption calls `schedulePopoutSetup(leaf, false)` —
+     re-applies styles + header bar only, with **no** resize or reposition (that
+     forced shrink was the worst of the old behavior).
+   Adoption runs **only at startup**, so popouts the user opens mid-session are
+   never adopted. Pins are *not* restored (still in-memory only — see #7).
 
 6. **Bounds.** Width and height come from `settings.defaultWidth` (default 375)
    and `settings.windowHeight` (default 1000) — both user-configurable in the

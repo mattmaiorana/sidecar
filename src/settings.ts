@@ -42,6 +42,9 @@ export interface SidecarBrowserSettings {
 	/** Internal: set once the left-sidebar launcher view has been auto-added, so
 	 *  it is not re-added every load (and stays gone if the user removes it). */
 	launcherInitialized: boolean;
+	/** Internal: note paths currently shown in open Sidecars, persisted so a
+	 *  reload can re-skin the matching restored popouts (and only those). */
+	sidecarPaths: string[];
 }
 
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
@@ -58,6 +61,7 @@ export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	defaultNote: "",
 	showHomeButton: false,
 	launcherInitialized: false,
+	sidecarPaths: [],
 };
 
 export class SidecarBrowserSettingTab extends PluginSettingTab {

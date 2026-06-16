@@ -159,22 +159,23 @@ lose their pin. To persist: save a set of pinned file paths in plugin settings a
 re-apply `setAlwaysOnTop` when a Sidecar is restored — which requires the
 restore-adoption feature below.
 
-## Safe restore adoption (was removed)
+## Safe restore adoption — DONE (re-skin only)
 
-The plugin used to run `adoptRestoredSidecar()` on `onLayoutReady` to re-skin
-Sidecar popouts that Obsidian restored from the previous session. It was removed
-because it adopted *all* markdown popouts — including the user's own native
-"Open in new window" popouts — and forcibly shrank them to 375px and stripped
-their chrome on every reload. Today a restored Sidecar simply comes back as a
-plain popout (reopen to re-skin).
+**Implemented** as `adoptRestoredSidecars()` (see locked decision #5). On reload,
+restored Sidecar popouts are re-skinned by matching the note they show against
+the persisted `settings.sidecarPaths`, with geometry left untouched. This is the
+path-matched, geometry-preserving successor to the removed (unsafe)
+`adoptRestoredSidecar()`.
 
-To re-add it safely it must only touch *our* windows. Approaches:
-- Persist the set of Sidecar file paths in settings, and on restore only adopt
-  popouts showing one of those files (imperfect — the same note could be in a
-  user popout).
-- Look for a marker that survives Obsidian's serialize/restore. The injected
-  `<style>` and `body` class do **not** survive (the popout DOM is rebuilt), so
-  this needs a leaf-level or settings-level identity, not a DOM marker.
+Still parked / known limits:
+- **Pin state is not restored** — always-on-top is still in-memory only and
+  clears on reload (see the "Pin state persistence" section, which now only needs
+  the persist+re-apply half since the adoption half exists).
+- **Residual false-positive:** the same note also open in a user's *own* popout
+  would be adopted. If it ever bites, tighten identity from path-based to a
+  per-leaf match. The injected `<style>` / `body` class still do **not** survive
+  restore (the popout DOM is rebuilt), so any stricter identity must be
+  leaf-level or settings-level, not a DOM marker.
 
 ## Other deferred items
 
