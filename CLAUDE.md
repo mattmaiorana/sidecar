@@ -33,12 +33,15 @@ from — a durable replacement for the deleted folder-browser view.
 3. **Entry points.** Two notes can be targeted: the **active** note and the
    configured **default** note (`settings.defaultNote`).
    - *Active note:* command "Open current note in Sidecar"; ribbon button
-     (`square-arrow-up-right`); right-click `.md` in file tree → "Open in
-     Sidecar"; `square-arrow-up-right` action button injected into every
+     (`arrow-up-right`); right-click `.md` in file tree → "Open in
+     Sidecar"; `arrow-up-right` action button injected into every
      main-window `MarkdownView` toolbar (via `active-leaf-change`, guarded to
      skip popout leaves).
    - *Default note:* command "Open default note in Sidecar" (bound by default to
-     **`Mod+Shift+S`**); ribbon button (`file-text`). `openDefaultNote()` opens
+     **`Mod+Shift+S`**); ribbon button (`file-text`); and a one-click
+     `file-text` button injected into the **left sidebar tab-header strip**
+     (`SidecarLauncherButtons` in `launcher-button.ts`, for users who hide the
+     ribbon — see #11). `openDefaultNote()` opens
      `settings.defaultNote` if set and resolvable, else **falls back to the
      active note** (so the hotkey is never a dead end); a missing configured path
      shows a Notice.
@@ -56,8 +59,7 @@ from — a durable replacement for the deleted folder-browser view.
    - **Per-button visibility** is controlled by per-document `<style>` tags
      (`applyPinStyle`, `applyPopInStyle`, `applyNavStyle`, `applyHomeStyle`),
      each toggled live from settings via an `update*Style()` method that loops
-     open leaves. Back/forward and home default **off**; pop-in and pin default
-     **on**.
+     open leaves. Back/forward, home, pop-in, and pin all default **on**.
    - **Back/forward** (`navigate()`) set the leaf active (`setActiveLeaf`, no
      focus) then fire the built-in `app:go-back` / `app:go-forward` commands so
      they target the Sidecar's leaf. There is no public `WorkspaceLeaf.goBack()`.
@@ -139,6 +141,24 @@ from — a durable replacement for the deleted folder-browser view.
     Obsidian then anchors the popup's right edge in view and shoves the left edge
     (the titles) off-screen. The cap is defense-in-depth even with decision #9 in
     place — keep it.
+
+11. **Left-sidebar launcher button — DOM hack, mounted as a tab sibling.**
+    `SidecarLauncherButtons` (`launcher-button.ts`) injects a one-click
+    `file-text` button (→ `openDefaultNote()`) into the left sidebar's
+    `.workspace-tab-header-container`, **immediately before
+    `.workspace-tab-header-spacer`**, for users who keep the ribbon hidden. There
+    is **no public API** for this, so:
+    - **Do not mount it inside `.workspace-tab-header-container-inner`.** Obsidian
+      rebuilds that inner container's children when switching sidebar tabs, which
+      wipes the button (flicker, then gone). The spacer slot is a stable sibling.
+    - Mounting is defensive + idempotent and is **re-run on `layout-change`**
+      (Obsidian rebuilds the strip); the button is removed in `onunload`.
+    - Its look is matched to the tabs via an injected `<style>` (`document.head`,
+      id `sidecar-launcher-strip-style`): 25px tall, `0 8px` padding, 18px icon
+      (→ the measured 34×25 tab-inner box), `var(--tab-radius)`, a
+      `var(--size-2-1)` left margin for the inter-tab gap, faint→bright on hover.
+    This is a deliberate, ribbon-hidden-only convenience; it reaches into another
+    view's DOM, which the plugin otherwise avoids (#4).
 
 ## API correctness
 
