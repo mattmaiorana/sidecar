@@ -130,8 +130,11 @@ export class SidecarWindowManager {
 		if (!this.plugin.settings.reskinPopoutsOnReload) return;
 		const scan = () => this.scanAndAdopt();
 		scan();
+		// Stagger the retries to catch popouts Obsidian restores (and finishes
+		// loading) a little late, without grabbing them mid-restore.
 		window.setTimeout(scan, 300);
 		window.setTimeout(scan, 800);
+		window.setTimeout(scan, 2000);
 	}
 
 	private scanAndAdopt(): void {
@@ -139,6 +142,11 @@ export class SidecarWindowManager {
 			// Popout windows only, and never re-adopt one we're already tracking.
 			if (!(leaf.getContainer() instanceof WorkspaceWindow)) continue;
 			if (this.leaves.has(leaf)) continue;
+			// Only adopt a fully-loaded MarkdownView. A view Obsidian is still
+			// lazily restoring (a deferred view) is not a MarkdownView yet;
+			// decorating it mid-restore can make Obsidian re-create it (showing up
+			// as a duplicate popout). Later retries catch it once it has loaded.
+			if (!(leaf.view instanceof MarkdownView)) continue;
 			this.leaves.add(leaf);
 			// reposition = false: preserve the window's restored size/position.
 			this.schedulePopoutSetup(leaf, false);
