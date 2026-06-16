@@ -220,7 +220,7 @@ export class SidecarWindowManager {
 			cls: "sidecar-popin-btn clickable-icon",
 			attr: { "aria-label": "Return to main window" },
 		});
-		setIcon(popInBtn, "square-arrow-down-left");
+		setIcon(popInBtn, "arrow-down-left");
 		this.plugin.registerDomEvent(popInBtn, "click", () => {
 			void this.popIn(leaf);
 		});
