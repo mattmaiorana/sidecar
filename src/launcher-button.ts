@@ -9,9 +9,12 @@ const STYLE_ID = "sidecar-launcher-strip-style";
  * sidebar's tab-header strip (next to Files/Search), for users who keep the
  * ribbon hidden. Triggers `openDefaultNote()`.
  *
- * The button is mounted *inside* `.workspace-tab-header-container-inner` (after
- * the tabs) so it shares the tabs' exact vertical box — otherwise its hover
- * highlight ends up a different height/position than the tabs beside it.
+ * The button is mounted just before `.workspace-tab-header-spacer` — a stable
+ * sibling of the tab list. We deliberately do NOT mount it inside
+ * `.workspace-tab-header-container-inner`: Obsidian rebuilds that container's
+ * children when switching sidebar tabs, which would wipe (and flicker) the
+ * button. The trade-off is that the hover pill is matched to the tabs via CSS
+ * rather than by inheriting their exact box.
  *
  * This reaches into Obsidian's chrome DOM, which has no public API — so mounting
  * is defensive (bails if the strip is missing) and idempotent, and `mount()` is
@@ -27,10 +30,10 @@ export class SidecarLauncherButtons {
 
 	/** Mount the button if its target exists. Safe to call repeatedly. */
 	mount(): void {
-		const inner = document.querySelector(
-			".workspace-split.mod-left-split .workspace-tab-header-container-inner"
+		const container = document.querySelector(
+			".workspace-split.mod-left-split .workspace-tab-header-container"
 		);
-		if (!inner) return;
+		if (!container) return;
 		this.injectStyle();
 		if (!this.stripBtn) {
 			this.stripBtn = createDiv({
@@ -42,8 +45,19 @@ export class SidecarLauncherButtons {
 				void this.plugin.openDefaultNote();
 			});
 		}
-		if (this.stripBtn.parentElement === inner) return; // already placed
-		inner.appendChild(this.stripBtn);
+
+		// Sit just before the flex spacer (a stable sibling of the tab list),
+		// so the button lands in-line with the tab icons on the left.
+		const spacer = container.querySelector(
+			":scope > .workspace-tab-header-spacer"
+		);
+		if (spacer) {
+			if (this.stripBtn.nextElementSibling === spacer) return; // already placed
+			spacer.before(this.stripBtn);
+		} else {
+			if (this.stripBtn.parentElement === container) return;
+			container.appendChild(this.stripBtn);
+		}
 	}
 
 	/** Detach the button and its styles (called on unload). */
@@ -55,8 +69,10 @@ export class SidecarLauncherButtons {
 
 	/**
 	 * Style the button as a tab-strip icon: a faint icon at the header icon size
-	 * that brightens on hover, with a full-height pill highlight (var(--tab-radius))
-	 * matching the tab hover beside it.
+	 * that brightens on hover, with a tab-radius pill highlight roughly matching
+	 * the tabs' (icon size + small vertical padding ≈ the tab pill height; 8px
+	 * sides to match `.workspace-tab-header-inner`). align-self keeps it from
+	 * stretching to the full strip height.
 	 */
 	private injectStyle(): void {
 		if (document.getElementById(STYLE_ID)) return;
@@ -64,8 +80,8 @@ export class SidecarLauncherButtons {
 		el.id = STYLE_ID;
 		el.textContent = `
 .sidecar-launcher-strip-btn.clickable-icon {
-	height: 100%;
-	padding: 0 8px;
+	align-self: center;
+	padding: var(--size-2-2) 8px;
 	border-radius: var(--tab-radius);
 	color: var(--icon-color);
 	opacity: var(--icon-opacity);
