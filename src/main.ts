@@ -1,29 +1,23 @@
-import { MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf, WorkspaceWindow } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, WorkspaceWindow } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
 	SidecarBrowserSettings,
 	SidecarBrowserSettingTab,
 } from "./settings";
 import { SidecarWindowManager, SIDECAR_BUILD } from "./window-manager";
-import { SidecarLauncherView, SIDECAR_LAUNCHER_VIEW_TYPE } from "./sidebar-view";
+import { SidecarLauncherButtons } from "./launcher-button";
 
 export default class SidecarBrowserPlugin extends Plugin {
 	settings!: SidecarBrowserSettings;
 	windowManager!: SidecarWindowManager;
+	launcherButtons!: SidecarLauncherButtons;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
 		console.info(`[Sidecar] loaded — build ${SIDECAR_BUILD}`);
 
 		this.windowManager = new SidecarWindowManager(this);
-
-		// Left-sidebar launcher panel: a non-ribbon, one-button home for opening
-		// the default note in a Sidecar. Registered before layout restore so
-		// Obsidian rehydrates the panel automatically across reloads.
-		this.registerView(
-			SIDECAR_LAUNCHER_VIEW_TYPE,
-			(leaf) => new SidecarLauncherView(leaf, this)
-		);
+		this.launcherButtons = new SidecarLauncherButtons(this);
 
 		// Primary entry point.
 		this.addCommand({
@@ -45,15 +39,6 @@ export default class SidecarBrowserPlugin extends Plugin {
 			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "S" }],
 			callback: () => {
 				void this.openDefaultNote();
-			},
-		});
-
-		// Re-open / reveal the sidebar launcher panel (e.g. after closing it).
-		this.addCommand({
-			id: "open-sidecar-launcher",
-			name: "Open Sidecar launcher panel",
-			callback: () => {
-				void this.activateLauncherView();
 			},
 		});
 
@@ -123,16 +108,14 @@ export default class SidecarBrowserPlugin extends Plugin {
 		this.updateToolbarStyle();
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
 
-		// Auto-add the launcher panel once (first run). After that we leave it
-		// alone: Obsidian restores it across reloads, and if the user removes it
-		// the `launcherInitialized` flag keeps it from reappearing.
+		// Mount the launcher buttons, and re-mount them when Obsidian rebuilds
+		// the sidebar/ribbon chrome they live in.
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => this.launcherButtons.mount())
+		);
+
 		this.app.workspace.onLayoutReady(() => {
-			if (
-				!this.settings.launcherInitialized &&
-				this.app.workspace.getLeavesOfType(SIDECAR_LAUNCHER_VIEW_TYPE).length === 0
-			) {
-				void this.initLauncherView();
-			}
+			this.launcherButtons.mount();
 			// Re-skin any Sidecars that Obsidian restored from the previous session.
 			this.windowManager.adoptRestoredSidecars();
 		});
@@ -142,6 +125,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// Reverse every mark we made (styles, header bars, pins). Leaves the
 		// popout windows open as plain popouts.
 		this.windowManager?.teardown();
+		this.launcherButtons?.remove();
 		document.getElementById("sidecar-ribbon-style")?.remove();
 		document.getElementById("sidecar-home-ribbon-style")?.remove();
 		document.getElementById("sidecar-toolbar-style")?.remove();
@@ -165,36 +149,6 @@ export default class SidecarBrowserPlugin extends Plugin {
 			return;
 		}
 		await this.windowManager.open(file);
-	}
-
-	/** First-run: add the launcher panel to the left sidebar without stealing focus. */
-	async initLauncherView(): Promise<void> {
-		const leaf = this.app.workspace.getLeftLeaf(false);
-		if (!leaf) return;
-		await leaf.setViewState({ type: SIDECAR_LAUNCHER_VIEW_TYPE });
-		this.settings.launcherInitialized = true;
-		await this.saveSettings();
-	}
-
-	/** Reveal the launcher panel, creating it in the left sidebar if it's gone. */
-	async activateLauncherView(): Promise<void> {
-		const { workspace } = this.app;
-		const existing = workspace.getLeavesOfType(SIDECAR_LAUNCHER_VIEW_TYPE);
-		let leaf: WorkspaceLeaf | null = existing.length > 0 ? existing[0] : null;
-		if (!leaf) {
-			leaf = workspace.getLeftLeaf(false);
-			if (!leaf) return;
-			await leaf.setViewState({ type: SIDECAR_LAUNCHER_VIEW_TYPE, active: true });
-		}
-		void workspace.revealLeaf(leaf);
-	}
-
-	/** Re-render any open launcher panels (e.g. after the default note changes). */
-	refreshLauncherView(): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(SIDECAR_LAUNCHER_VIEW_TYPE)) {
-			const view = leaf.view;
-			if (view instanceof SidecarLauncherView) view.render();
-		}
 	}
 
 	updateHomeRibbonStyle(): void {
