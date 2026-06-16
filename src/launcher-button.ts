@@ -40,7 +40,7 @@ export class SidecarLauncherButtons {
 				cls: "clickable-icon sidecar-launcher-strip-btn",
 				attr: { "aria-label": "Open default note in Sidecar" },
 			});
-			setIcon(this.stripBtn, "square-arrow-out-up-right");
+			setIcon(this.stripBtn, "file-text");
 			this.plugin.registerDomEvent(this.stripBtn, "click", () => {
 				void this.plugin.openDefaultNote();
 			});
