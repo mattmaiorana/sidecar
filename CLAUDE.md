@@ -74,21 +74,23 @@ from — a durable replacement for the deleted folder-browser view.
    - **Drag region (macOS):** `-webkit-app-region: drag` on `.sidecar-bar` with
      left inset for traffic lights. Interactive controls are marked `no-drag`.
 
-5. **Only our windows are ever touched — restore re-skin is path-matched and
+5. **Fresh opens only touch our windows; restore re-skin is opt-in and
    geometry-preserving.** Fresh styling/resizing happens exclusively on windows
    opened via `open()`, gated by the `pendingPopout` flag in `handleWindowOpen`.
    On reload, Obsidian restores Sidecar popouts as plain (unstyled) windows, and
    `adoptRestoredSidecars()` (run at `onLayoutReady`, with a couple of retries to
-   catch late-restored popouts) **re-skins them**. It is the *safe* successor to
-   the removed `adoptRestoredSidecar()`, which hijacked the user's own native
-   "Open in new window" popouts (shrank them to 375px, stripped their chrome).
-   The safe version differs in two non-negotiable ways:
-   - **Path-matched, never blanket.** It adopts a restored popout only when the
-     note it shows is in `settings.sidecarPaths` — the set of notes that were in
-     open Sidecars, persisted via `persistSidecarPaths()` (called from `open()`,
-     `handleWindowClose()`, and the `file-open` event so it tracks in-Sidecar
-     navigation). An arbitrary/user-created popout is never touched. Residual
-     edge: the *same* note also open in a user's own popout would be adopted too.
+   catch late-restored popouts) **re-skins them** — but only when the
+   `reskinPopoutsOnReload` setting is on (**default off**). The two invariants:
+   - **All-popouts, behind a flag.** When enabled it re-skins *every* restored
+     popout (`scanAndAdopt` filters to popout containers only). This deliberately
+     replaced an earlier path-matched scheme (persisting `sidecarPaths` and
+     matching by note) — that had a real-time-persistence dependency and timing
+     races that left popouts unskinned. The user accepted skinning all popouts
+     because they only ever use popouts for Sidecars; the setting (off by default)
+     keeps it safe for users who use native popouts. This is a deliberate
+     relaxation of the original "never adopt anything but our own" rule. The old
+     `adoptRestoredSidecar()` was worse still: it ran unconditionally *and*
+     shrank popouts to 375px and stripped their chrome.
    - **Geometry preserved.** Adoption calls `schedulePopoutSetup(leaf, false)` —
      re-applies styles + header bar only, with **no** resize or reposition (that
      forced shrink was the worst of the old behavior).

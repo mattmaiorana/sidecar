@@ -60,7 +60,6 @@ export class SidecarWindowManager {
 
 		this.pendingPopout = false;
 		this.schedulePopoutSetup(leaf, true);
-		this.persistSidecarPaths();
 	}
 
 	/**
@@ -111,38 +110,24 @@ export class SidecarWindowManager {
 			this.pinnedLeaves.delete(leaf);
 			break;
 		}
-		this.persistSidecarPaths();
 	}
 
 	/**
-	 * Record the notes currently shown in open Sidecars into settings, so a
-	 * reload can recognise which restored popouts are ours. Recomputed from the
-	 * live leaf set (so it tracks in-Sidecar navigation) and only written when it
-	 * actually changes, keeping this cheap to call from frequent events.
-	 */
-	persistSidecarPaths(): void {
-		const paths = new Set<string>();
-		for (const leaf of this.leaves) {
-			const view = leaf.view;
-			if (view instanceof MarkdownView && view.file) paths.add(view.file.path);
-		}
-		const next = [...paths];
-		const prev = this.plugin.settings.sidecarPaths;
-		if (next.length === prev.length && next.every((p) => prev.includes(p))) return;
-		this.plugin.settings.sidecarPaths = next;
-		void this.plugin.saveSettings();
-	}
-
-	/**
-	 * Re-skin Sidecars that Obsidian restored after a reload. Runs only at
-	 * startup (a few retries to catch late-restored popouts) and adopts a popout
-	 * *only* when the note it shows is one we recorded as a Sidecar — never an
-	 * arbitrary or user-created popout. Geometry is left untouched (no resize or
-	 * reposition); we only re-apply the styles and header bar. This is the safe
-	 * version of the removed `adoptRestoredSidecar()` (see decision #5).
+	 * Re-skin popouts that Obsidian restored after a reload. Gated by the
+	 * `reskinPopoutsOnReload` setting. Runs only at startup (a few retries to
+	 * catch late-restored popouts) and re-applies the Sidecar styling + header
+	 * bar to every restored popout, leaving geometry untouched (no resize or
+	 * reposition).
+	 *
+	 * Adopting *every* popout — rather than only notes we previously recorded —
+	 * is intentional: it drops all save/restore bookkeeping (and the failure
+	 * modes that came with it), at the cost of also skinning a user's own
+	 * non-Sidecar popouts. That trade is the user's to make via the setting,
+	 * which is why this relaxes the original path-matched decision #5 behind an
+	 * off-by-default flag. Startup-only, so mid-session popouts are never touched.
 	 */
 	adoptRestoredSidecars(): void {
-		if (this.plugin.settings.sidecarPaths.length === 0) return;
+		if (!this.plugin.settings.reskinPopoutsOnReload) return;
 		const scan = () => this.scanAndAdopt();
 		scan();
 		window.setTimeout(scan, 300);
@@ -150,15 +135,10 @@ export class SidecarWindowManager {
 	}
 
 	private scanAndAdopt(): void {
-		const wanted = new Set(this.plugin.settings.sidecarPaths);
-		if (wanted.size === 0) return;
 		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
 			// Popout windows only, and never re-adopt one we're already tracking.
 			if (!(leaf.getContainer() instanceof WorkspaceWindow)) continue;
 			if (this.leaves.has(leaf)) continue;
-			const view = leaf.view;
-			if (!(view instanceof MarkdownView) || !view.file) continue;
-			if (!wanted.has(view.file.path)) continue;
 			this.leaves.add(leaf);
 			// reposition = false: preserve the window's restored size/position.
 			this.schedulePopoutSetup(leaf, false);

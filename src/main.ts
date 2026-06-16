@@ -87,14 +87,6 @@ export default class SidecarBrowserPlugin extends Plugin {
 			})
 		);
 
-		// Keep the persisted Sidecar identity current as notes change (including
-		// in-Sidecar navigation), so a reload re-skins the right restored popouts.
-		this.registerEvent(
-			this.app.workspace.on("file-open", () => {
-				this.windowManager.persistSidecarPaths();
-			})
-		);
-
 		// Right-click a .md file in the file tree → "Open in Sidecar".
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {

@@ -42,9 +42,10 @@ export interface SidecarBrowserSettings {
 	/** Internal: set once the left-sidebar launcher view has been auto-added, so
 	 *  it is not re-added every load (and stays gone if the user removes it). */
 	launcherInitialized: boolean;
-	/** Internal: note paths currently shown in open Sidecars, persisted so a
-	 *  reload can re-skin the matching restored popouts (and only those). */
-	sidecarPaths: string[];
+	/** When true, every popout window restored after an Obsidian reload is
+	 *  re-skinned as a Sidecar. Safe to leave on if you only use popouts for
+	 *  Sidecars; turn off if you use native popout windows you want left alone. */
+	reskinPopoutsOnReload: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
@@ -61,7 +62,7 @@ export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	defaultNote: "",
 	showHomeButton: false,
 	launcherInitialized: false,
-	sidecarPaths: [],
+	reskinPopoutsOnReload: false,
 };
 
 export class SidecarBrowserSettingTab extends PluginSettingTab {
@@ -194,6 +195,20 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 						this.plugin.settings.smallerPadding = value;
 						await this.plugin.saveSettings();
 						this.plugin.windowManager.refreshPopoutStyles();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Re-skin popouts on reload")
+			.setDesc(
+				"After reloading Obsidian, re-apply Sidecar styling to restored popout windows (their size and position are left alone). Turn off if you use native popout windows you want left untouched."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.reskinPopoutsOnReload)
+					.onChange(async (value) => {
+						this.plugin.settings.reskinPopoutsOnReload = value;
+						await this.plugin.saveSettings();
 					})
 			);
 

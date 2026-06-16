@@ -159,23 +159,28 @@ lose their pin. To persist: save a set of pinned file paths in plugin settings a
 re-apply `setAlwaysOnTop` when a Sidecar is restored — which requires the
 restore-adoption feature below.
 
-## Safe restore adoption — DONE (re-skin only)
+## Restore re-skin on reload — DONE (all popouts, opt-in)
 
-**Implemented** as `adoptRestoredSidecars()` (see locked decision #5). On reload,
-restored Sidecar popouts are re-skinned by matching the note they show against
-the persisted `settings.sidecarPaths`, with geometry left untouched. This is the
-path-matched, geometry-preserving successor to the removed (unsafe)
-`adoptRestoredSidecar()`.
+**Implemented** as `adoptRestoredSidecars()` (see locked decision #5), gated by
+the `reskinPopoutsOnReload` setting (**default off**). When on, every popout
+Obsidian restores after a reload is re-skinned, geometry untouched.
+
+History: first shipped path-matched (persist `sidecarPaths`, match restored
+popouts by note). That had a real-time-persistence dependency and timing races
+that left popouts unskinned in practice, so it was replaced with the simpler
+all-popouts approach — the user only uses popouts for Sidecars, and the
+off-by-default flag keeps it safe for users who use native popouts.
 
 Still parked / known limits:
+- **Default-on for release?** Currently off by default (community-safe). Revisit
+  whether to surface it more prominently in the README so users discover it.
 - **Pin state is not restored** — always-on-top is still in-memory only and
-  clears on reload (see the "Pin state persistence" section, which now only needs
-  the persist+re-apply half since the adoption half exists).
-- **Residual false-positive:** the same note also open in a user's *own* popout
-  would be adopted. If it ever bites, tighten identity from path-based to a
-  per-leaf match. The injected `<style>` / `body` class still do **not** survive
-  restore (the popout DOM is rebuilt), so any stricter identity must be
-  leaf-level or settings-level, not a DOM marker.
+  clears on reload (see "Pin state persistence"; only the persist+re-apply half
+  remains, since adoption now exists).
+- **Skins all popouts when on** — including a user's own non-Sidecar popouts.
+  Acceptable given the flag; if a finer scope is ever wanted, it needs a
+  leaf-level or settings-level identity (the injected `<style>` / `body` class do
+  **not** survive restore — the popout DOM is rebuilt — so a DOM marker won't do).
 
 ## Other deferred items
 
