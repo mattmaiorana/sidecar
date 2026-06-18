@@ -9,6 +9,18 @@ const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
 export const SIDECAR_BUILD = "1.1.0";
 
+/** Minimal shapes of the Electron remote APIs the zombie sweep relies on. */
+interface RemoteBrowserWindow {
+	id: number;
+	isDestroyed(): boolean;
+	destroy(): void;
+	webContents: { executeJavaScript(code: string): Promise<unknown> };
+}
+interface ZombieSweepRemote {
+	getCurrentWindow(): RemoteBrowserWindow;
+	BrowserWindow: { getAllWindows(): RemoteBrowserWindow[] };
+}
+
 
 /**
  * Manages all open Sidecar popout windows.
@@ -28,6 +40,10 @@ export class SidecarWindowManager {
 	/** Leaves whose window is currently pinned always-on-top (in-memory only;
 	 *  not persisted, so a reload clears pins). */
 	private pinnedLeaves = new Set<WorkspaceLeaf>();
+	/** Unique per plugin load. Stamped on every popout we skin so the zombie
+	 *  sweep can tell this session's windows from orphans left by a prior one. */
+	private readonly sessionToken =
+		Date.now().toString(36) + Math.random().toString(36).slice(2);
 
 	constructor(plugin: SidecarBrowserPlugin) {
 		this.plugin = plugin;
@@ -162,6 +178,7 @@ export class SidecarWindowManager {
 				doc.getElementById(STYLE_ID)?.remove();
 				doc.body.classList.remove(POPOUT_BODY_CLASS);
 				delete doc.body.dataset.sidecarBuild;
+				delete doc.body.dataset.sidecarSession;
 			}
 			leaf.view?.containerEl
 				?.querySelector(":scope > .sidecar-titlebar")
@@ -278,6 +295,66 @@ export class SidecarWindowManager {
 		return this.getRemoteModule() !== null;
 	}
 
+	/** Whether Electron's remote module is reachable (pin button + zombie sweep). */
+	remoteAvailable(): boolean {
+		return this.getRemoteModule() !== null;
+	}
+
+	/**
+	 * Close "zombie" Sidecar popouts left over from a previous session. On
+	 * "Reload app without saving" Obsidian reloads the main renderer without
+	 * closing existing popout windows, then restores fresh ones — leaving the old
+	 * popouts open but dead (their links / live preview no longer work). This is
+	 * an Obsidian-level bug; it happens with the plugin disabled too.
+	 *
+	 * Every popout we skin stamps `body.dataset.sidecarSession` with this load's
+	 * token (see `applyPopoutMarks`). Here we read that token off every Electron
+	 * window: any window carrying a Sidecar token that ISN'T the current one is an
+	 * orphan from before the reload, so we destroy it. Windows with the current
+	 * token (this session's live popouts) and windows with no token (the user's
+	 * own popouts) are never touched — so the result is timing-independent. Gated
+	 * by the setting and by the remote module being reachable.
+	 */
+	closeZombiePopouts(): void {
+		if (!this.plugin.settings.closeZombiePopoutsOnReload) return;
+		const remote = this.getRemoteModule() as unknown as ZombieSweepRemote | null;
+		if (!remote || typeof remote.BrowserWindow?.getAllWindows !== "function") return;
+		let currentId: number;
+		let windows: RemoteBrowserWindow[];
+		try {
+			currentId = remote.getCurrentWindow().id;
+			windows = remote.BrowserWindow.getAllWindows();
+		} catch {
+			return;
+		}
+		for (const win of windows) {
+			try {
+				if (win.id === currentId || win.isDestroyed()) continue;
+			} catch {
+				continue;
+			}
+			win.webContents
+				.executeJavaScript(
+					"(document.body && document.body.dataset.sidecarSession) || ''"
+				)
+				.then((token) => {
+					if (typeof token === "string" && token && token !== this.sessionToken) {
+						try {
+							win.destroy();
+							console.info(
+								"[Sidecar] closed a leftover popout from a previous session"
+							);
+						} catch {
+							/* already gone */
+						}
+					}
+				})
+				.catch(() => {
+					/* window not readable — leave it alone */
+				});
+		}
+	}
+
 	/** Resolve Electron's remote module from the plugin context, or null. Both
 	 *  `@electron/remote` and `electron.remote` are tried; both are deprecated,
 	 *  so this may legitimately return null on newer Electron builds. */
@@ -360,6 +437,7 @@ export class SidecarWindowManager {
 	private applyPopoutMarks(doc: Document): void {
 		doc.body.classList.add(POPOUT_BODY_CLASS);
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
+		doc.body.dataset.sidecarSession = this.sessionToken;
 		this.injectPopoutStyles(doc);
 		this.applyPinStyle(doc);
 		this.applyPopInStyle(doc);

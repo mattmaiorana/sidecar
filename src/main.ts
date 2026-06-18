@@ -118,6 +118,8 @@ export default class SidecarBrowserPlugin extends Plugin {
 			this.launcherButtons.mount();
 			// Re-skin any Sidecars that Obsidian restored from the previous session.
 			this.windowManager.adoptRestoredSidecars();
+			// Close any dead leftover popouts from before a reload (opt-in).
+			this.windowManager.closeZombiePopouts();
 		});
 	}
 

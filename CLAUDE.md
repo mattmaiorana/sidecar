@@ -162,6 +162,26 @@ from — a durable replacement for the deleted folder-browser view.
     This is a deliberate, ribbon-hidden-only convenience; it reaches into another
     view's DOM, which the plugin otherwise avoids (#4).
 
+12. **Zombie popout cleanup — opt-in, remote-gated, session-token based.**
+    "Reload app without saving" reloads the main renderer **without closing
+    existing popout windows** (plugin `onunload` never fires), then restores fresh
+    ones — leaving the old popouts open but dead (links / live preview broken).
+    This is an *Obsidian-level* bug (happens with the plugin disabled too).
+    `closeZombiePopouts()` (run at `onLayoutReady`, behind the
+    `closeZombiePopoutsOnReload` setting, **default off**) cleans them up:
+    - Every popout we skin stamps `body.dataset.sidecarSession` with a
+      **per-load token** (`sessionToken`, set in `applyPopoutMarks`).
+    - The sweep enumerates Electron windows via `@electron/remote`
+      `BrowserWindow.getAllWindows()` and `webContents.executeJavaScript`-reads
+      each body's token, calling `win.destroy()` on any window whose token is
+      **non-empty and ≠ the current session's** — i.e. a Sidecar we skinned in a
+      *previous* session. Live popouts (current token) and the user's own popouts
+      (no token) are never touched, so it's **timing-independent** (no ordering
+      dependency vs `adoptRestoredSidecars`). A bare `sidecar-popout`-class check
+      would race re-skin and could kill a live window — the token avoids that.
+    - Needs the remote module (like the pin button, #7), so the setting is only
+      shown when `remoteAvailable()`.
+
 ## API correctness
 
 The installed `obsidian` package's TypeScript definitions

@@ -46,6 +46,10 @@ export interface SidecarBrowserSettings {
 	 *  re-skinned as a Sidecar. Safe to leave on if you only use popouts for
 	 *  Sidecars; turn off if you use native popout windows you want left alone. */
 	reskinPopoutsOnReload: boolean;
+	/** When true, orphaned Sidecar popouts left over from before an Obsidian
+	 *  reload (dead duplicates) are closed at startup. Needs the Electron remote
+	 *  module; only ever closes windows this plugin skinned in a prior session. */
+	closeZombiePopoutsOnReload: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
@@ -63,6 +67,7 @@ export const DEFAULT_SETTINGS: SidecarBrowserSettings = {
 	showHomeButton: true,
 	showLauncherButton: true,
 	reskinPopoutsOnReload: false,
+	closeZombiePopoutsOnReload: false,
 };
 
 export class SidecarBrowserSettingTab extends PluginSettingTab {
@@ -209,6 +214,24 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		// Only offered when the Electron remote module is reachable — without it
+		// the sweep can't enumerate or close windows, so the toggle would lie.
+		if (this.plugin.windowManager.remoteAvailable()) {
+			new Setting(containerEl)
+				.setName("Close leftover popouts on reload")
+				.setDesc(
+					"After an Obsidian reload, close orphaned Sidecar popout windows left over from before the reload — the dead duplicates whose links and live preview no longer work."
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.closeZombiePopoutsOnReload)
+						.onChange(async (value) => {
+							this.plugin.settings.closeZombiePopoutsOnReload = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
 
 		new Setting(containerEl)
 			.setName("Show 'open current note' ribbon button")
