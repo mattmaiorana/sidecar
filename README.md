@@ -20,7 +20,8 @@ navigate with the back/forward and home buttons.
   right-click, or the action button in any note's toolbar.
 - There are **two targets**: the **current** note (whatever's active) and a
   configurable **default note**. The default note has its own command, hotkey,
-  and ribbon button — open your index from anywhere with one keystroke.
+  ribbon button, and a button in the left sidebar's tab bar — open your index
+  from anywhere with one click or keystroke.
 - Opening a note that's already open in the main window **closes the main-window
   copy first** (pop-out mode), so you're never looking at two copies of the same
   note at once.
@@ -52,13 +53,16 @@ navigate with the back/forward and home buttons.
 | Default note | *(empty)* | Path (vault-relative) opened by the default-note command, hotkey, ribbon button, and the home button. Type to autocomplete from your notes. Empty = those actions fall back to the current note. |
 | Make text smaller | On | Scales note content to 14 px. Inline title: 18 px. Headings scale from h1 (18 px) down to h4–h6 (14 px). Code blocks and inline code: 13 px. Callout titles and properties panel: 14 px. |
 | Make padding smaller | On | Tightens the note's content padding for a denser column feel. |
-| Show 'open current note' ribbon button | On | The `square-arrow-up-right` ribbon button that opens the active note. |
+| Show 'open current note' ribbon button | On | The `arrow-up-right` ribbon button that opens the active note. |
 | Show 'open default note' ribbon button | On | The `file-text` ribbon button that opens the default note. |
+| Show sidebar launcher button | On | A `file-text` button in the left sidebar's tab bar that opens the default note (handy if you hide the ribbon). |
 | Show toolbar button | On | The open-in-Sidecar button on each note's editor toolbar. The command palette and file-tree right-click still work. |
 | Show pop-in button | On | The return-to-main-window button in the Sidecar bar. |
 | Show pin button | On | The always-on-top pin button in the Sidecar bar. |
-| Show back and forward buttons | Off | Navigation buttons in the Sidecar bar for the note history. |
-| Show home button | Off | A button in the Sidecar bar that returns to the default note. |
+| Show back and forward buttons | On | Navigation buttons in the Sidecar bar for the note history. |
+| Show home button | On | A button in the Sidecar bar that returns to the default note. |
+| Re-style popouts on reload | Off | Re-apply Sidecar styling to popout windows Obsidian restores after a reload. |
+| Close leftover popouts on reload | Off | After a reload, close the dead duplicate Sidecar popouts Obsidian leaves behind. Shown only when Obsidian's Electron remote API is reachable. |
 
 Leaving a width or height field empty resets it to the default.
 
@@ -78,17 +82,19 @@ This plugin isn't in the community store. To run it from source:
 Open the **current** note in a Sidecar any of these ways:
 
 - The command **"Open current note in Sidecar"** (command palette).
-- The **ribbon icon** (`square-arrow-up-right`) in Obsidian's left ribbon.
+- The **ribbon icon** (`arrow-up-right`) in Obsidian's left ribbon.
 - **Right-click a `.md` file** in the file tree → "Open in Sidecar".
-- The **action button** (`square-arrow-up-right`) in any note's editor toolbar.
+- The **action button** (`arrow-up-right`) in any note's editor toolbar.
 
 Open your **default** note in a Sidecar:
 
 - The command **"Open default note in Sidecar"** — bound by default to
   **`Cmd/Ctrl+Shift+S`** (rebindable in Obsidian's Hotkeys settings).
 - The **ribbon icon** (`file-text`) in Obsidian's left ribbon.
+- The **left-sidebar button** (`file-text`) in the sidebar's tab bar, next to
+  Files/Search (handy if you keep the ribbon hidden).
 
-If no default note is configured, both fall back to opening the current note.
+If no default note is configured, these fall back to opening the current note.
 
 From the Sidecar (buttons appear per your settings):
 

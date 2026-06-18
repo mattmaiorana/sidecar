@@ -5,6 +5,33 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.0]
+
+A feature release focused on a ribbon-free launcher and handling popout windows
+across Obsidian reloads.
+
+### Added
+- **Left-sidebar launcher button** — a one-click button injected into the left
+  sidebar's tab bar (next to Files/Search) that opens the default note in a
+  Sidecar, for users who keep the ribbon hidden. Toggle with the new **"Show
+  sidebar launcher button"** setting (on by default).
+- **"Re-style popouts on reload"** setting (off by default) — re-applies Sidecar
+  styling to popout windows that Obsidian restores after a reload, so they come
+  back skinned without reopening (size and position left untouched).
+- **"Close leftover popouts on reload"** setting (off by default) — after a
+  reload, closes the dead duplicate Sidecar windows Obsidian leaves behind (whose
+  links and live preview no longer work). Only ever closes windows this plugin
+  skinned in a previous session, identified by a per-session token; shown only
+  when Obsidian's Electron remote API is reachable.
+
+### Changed
+- **Back/forward and home buttons now show by default** (were off).
+- **Icons** — open-in-Sidecar buttons use `arrow-up-right` and the pop-in button
+  uses `arrow-down-left` (reverted from the `square-*` variants used in 1.1.0).
+- Added an MIT **LICENSE** file and aligned the npm package name with the folder.
+
+---
+
 ## [1.1.0]
 
 A feature release — adds the default note and in-Sidecar navigation. Bundles all
