@@ -5,6 +5,26 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.1]
+
+Community plugin directory compliance — no feature changes.
+
+### Changed
+- Main-window styling moved into a `styles.css` file (Obsidian loads it); button
+  visibility now toggles body classes. The popout chrome is still styled
+  per-popout. **Copy `styles.css` alongside `main.js` + `manifest.json`.**
+- The always-on-top pin no longer injects a `<script>` — it resolves the popout's
+  own window directly.
+- Command IDs/names simplified to **"Open current note"** and **"Open default
+  note"**. The default `Cmd/Ctrl+Shift+S` for the default note still works; if you
+  had bound your *own* hotkey to these commands, re-bind it.
+- `minAppVersion` raised to **1.5.11**; plugin description no longer says
+  "Obsidian".
+- Releases are now built and published with build-provenance attestations via
+  GitHub Actions.
+
+---
+
 ## [1.2.0]
 
 A feature release focused on a ribbon-free launcher and handling popout windows

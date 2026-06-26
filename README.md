@@ -69,12 +69,11 @@ Leaving a width or height field empty resets it to the default.
 
 Not in the community store yet. To install:
 
-1. Download `main.js` and `manifest.json` from the
+1. Download `main.js`, `manifest.json`, and `styles.css` from the
    [latest release](https://github.com/mattmaiorana/sidecar/releases/latest)
    (or build `main.js` from source — see [Development](#development)).
-2. Copy both files into your vault at:
+2. Copy all three files into your vault at:
    `<your vault>/.obsidian/plugins/sidecar/`
-   (there is no `styles.css` — all styling is injected at runtime).
 3. In Obsidian: **Settings → Community plugins**, make sure *Restricted mode* is
    off, then enable **Sidecar**.
 

@@ -66,13 +66,19 @@ from — a durable replacement for the deleted folder-browser view.
    - **Home** (`goHome()`) calls `leaf.openFile()` on the default note *in place*
      (navigates the existing Sidecar, unlike the ribbon/command which spawn a new
      window).
-   - **All popout CSS is injected directly into the popout's `<head>`** (see
-     `injectPopoutStyles` in `window-manager.ts`) — this is the *single source of
-     truth* for Sidecar styling. The rules are **not** scoped to a body class, so
-     nothing Obsidian does to `body.class` can drop them. `body.sidecar-popout`
-     is still added for debug/inspection. There is **no `styles.css`** — a shared
-     stylesheet would either be scoped to the wiped body class (non-functional)
-     or to a generic popout class (would skin the user's own popouts too).
+   - **Popout-chrome CSS is injected directly into each popout's `<head>`** (see
+     `injectPopoutStyles` in `window-manager.ts`). The rules are **not** scoped to
+     a body class, so nothing Obsidian does to `body.class` can drop them, and
+     they reach only the popouts we skin. `body.sidecar-popout` is added for
+     debug/inspection. This *must* stay injected (not moved to `styles.css`): a
+     shared stylesheet would either be scoped to the wiped body class
+     (non-functional) or apply to **every** popout, skinning the user's own.
+   - **Main-window styles live in `styles.css`** (Obsidian forbids creating
+     `<style>` elements in the main window — a community-review error). It holds
+     the launcher-button styling and the per-button visibility rules, which are
+     toggled via body classes (`sidecar-hide-ribbon-btn` etc.) from the
+     `update*Style()` methods. So a `styles.css` *does* exist now, but only for
+     main-window chrome; the popout chrome is still injected per the bullet above.
    - **Drag region (macOS):** `-webkit-app-region: drag` on `.sidecar-bar` with
      left inset for traffic lights. Interactive controls are marked `no-drag`.
 
@@ -110,12 +116,14 @@ from — a durable replacement for the deleted folder-browser view.
    geometry (right edge +40px, top −40px, y clamped to the screen's available top).
 
 7. **Always-on-top (pin button).** The pin button calls `setAlwaysOnTop(popoutWin,
-   pinned)`, which injects a `<script>` into the popout document to call
-   `require('@electron/remote').getCurrentWindow().setAlwaysOnTop()` (fallback
-   `require('electron').remote`). Script injection is necessary so
-   `getCurrentWindow()` resolves to the popout's BrowserWindow, not the main
-   window's. The button is only rendered when `alwaysOnTopSupported()` confirms
-   the remote module is reachable — otherwise it would toggle "active" while doing
+   pinned)`, which resolves the popout's *own* BrowserWindow via the popout
+   renderer's require — `popoutWin.require('@electron/remote').getCurrentWindow()`
+   (fallback `electron.remote`) — and calls `setAlwaysOnTop()` on it. Going
+   through the popout's *own* remote module is what makes `getCurrentWindow()`
+   resolve to the popout rather than the main window. **Do not inject a `<script>`**
+   to do this (an earlier version did; community review forbids dynamic script
+   injection). The button is only rendered when `remoteAvailable()` confirms the
+   remote module is reachable — otherwise it would toggle "active" while doing
    nothing. Pin state is in-memory only (not persisted across reloads).
 
 8. **Clean teardown.** `onunload` calls `windowManager.teardown()`, which reverses
@@ -221,10 +229,14 @@ src/window-manager.ts  Manages all popout windows: open, mark, header (nav/home/
                     the injected popout CSS. Holds the SIDECAR_BUILD stamp.
 src/settings.ts     Settings interface, defaults, settings tab, FileSuggest
                     (default-note path autocomplete).
+src/launcher-button.ts  Left-sidebar launcher button (see #11).
+styles.css          Main-window styles (button visibility via body classes,
+                    launcher button). Loaded by Obsidian.
+.github/workflows/release.yml  CI: builds + attests + publishes a release on tag.
 ```
 
-There is no `styles.css` — all popout CSS lives in `injectPopoutStyles`
-(`window-manager.ts`).
+`styles.css` holds **main-window** styles only; the **popout chrome** CSS is
+injected per-popout in `injectPopoutStyles` (`window-manager.ts`) — see #4.
 
 ## Dev / build workflow
 
@@ -236,9 +248,13 @@ npm run typecheck  # tsc -noEmit only — must pass clean
 
 Build output `main.js` is git-ignored. **Work only inside this repo** — do not
 write into any Obsidian vault from a session. The user copies the build outputs
-(`main.js` + `manifest.json` — there is no `styles.css`) into their vault's
+(`main.js` + `manifest.json` + `styles.css`) into their vault's
 `.obsidian/plugins/sidecar/` folder themselves and reloads the plugin in Obsidian
 (Cmd+P → "Reload app without saving", or toggle it off/on).
+
+Releases are cut by `.github/workflows/release.yml` on a version-tag push — it
+builds, attaches build-provenance attestations, and publishes `main.js` +
+`manifest.json` + `styles.css`. Tag must equal the manifest version (no `v`).
 
 `SIDECAR_BUILD` in `window-manager.ts` is stamped onto `body.dataset.sidecarBuild`
 in each popout — bump it when shipping a change so the user can confirm the live

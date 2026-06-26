@@ -7,7 +7,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 /** id of the <style> element we inject into each popout's <head>. */
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
-export const SIDECAR_BUILD = "1.2.0";
+export const SIDECAR_BUILD = "1.2.1";
 
 /** Minimal shapes of the Electron remote APIs we rely on (pin + zombie sweep). */
 interface RemoteBrowserWindow {
