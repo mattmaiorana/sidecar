@@ -83,13 +83,6 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Sidecar")
-			.setHeading()
-			.setDesc(
-				"Opens notes in a tall, narrow popout window alongside your main Obsidian window."
-			);
-
-		new Setting(containerEl)
 			.setName("Sidecar width")
 			.setDesc("Width of new Sidecar windows in pixels. Valid range: 200–1200.")
 			.addText((text) => {
