@@ -1,8 +1,8 @@
 # Sidecar
 
-An Obsidian plugin that opens a note in a **tall, narrow popout window** — a
-portable mini-Obsidian you can park next to your web browser — while the main
-Obsidian app stays open and untouched at its normal size.
+A **simplified Obsidian popout window** for navigating and editing project notes
+while the main window stays untouched — a tall, narrow mini-Obsidian you can park
+next to your web browser.
 
 It's the *same* Obsidian instance the whole time, just a second window. No
 separate app, no syncing. Window creation uses Obsidian's own popout API (the

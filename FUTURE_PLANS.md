@@ -38,7 +38,7 @@ _Fallback (old flow):_ fork `obsidianmd/obsidian-releases`, append to
   "id": "sidecar",
   "name": "Sidecar",
   "author": "Matt Maiorana",
-  "description": "Opens a tall, narrow popout window that acts as a portable mini-Obsidian for navigating and editing project notes, while the main app stays untouched.",
+  "description": "A simplified Obsidian popout window for navigating and editing project notes while the main window stays untouched.",
   "repo": "mattmaiorana/sidecar"
 }
 ```

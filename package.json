@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-sidecar",
 	"version": "1.2.0",
-	"description": "Opens a tall, narrow popout window that acts as a portable mini-Obsidian for navigating and editing project notes, while the main app stays untouched.",
+	"description": "A simplified Obsidian popout window for navigating and editing project notes while the main window stays untouched.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
