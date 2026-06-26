@@ -5,51 +5,31 @@ these without a conscious decision to expand scope.
 
 ---
 
-## Up next — ship to GitHub + Obsidian community list
+## Up next — submit to the Obsidian community list
 
-Concrete, ordered plan for publishing v1.1.0. **Paused before Phase B** at the
-user's request (2026-06-14) — no remote, push, release, or PR exists yet.
+### Done
+- **Repo created + pushed** (2026-06-26): **`mattmaiorana/sidecar`** (public;
+  renamed from the initial `obsidian-sidecar` to drop the `obsidian-` prefix, for
+  consistency with the user's other repos). `origin` tracks `main`.
+- **`1.2.0` released** (2026-06-26):
+  <https://github.com/mattmaiorana/sidecar/releases/tag/1.2.0> — tag `1.2.0` (no
+  `v` prefix), `main.js` + `manifest.json` attached as individual assets (no
+  `styles.css`, by design).
+- Pre-flight: `LICENSE` (MIT) added; `package.json` `"name"` is `obsidian-sidecar`
+  (Obsidian ignores it; left as-is — only the *GitHub repo* was renamed to
+  `sidecar`).
 
-### Pre-flight state (done 2026-06-14)
-- Added `LICENSE` (MIT, Matt Maiorana, 2026) — Obsidian review expects a license
-  file; `package.json` already declared MIT but no file existed.
-- Renamed `package.json` `"name"` → `obsidian-sidecar` (Obsidian ignores this
-  field; it just matches the folder/repo now).
+### Remaining — Phase D: submit to the community plugins list
+**Confirm the current flow first** (Obsidian developer docs / submission page).
+Per the user (2026-06-14), Obsidian reportedly lets you **link the GitHub repo**
+and an automated checker reads from it — no manual fork/PR. The fork-and-PR path
+below is the fallback if that flow isn't available.
 
-### Environment facts (verified 2026-06-14)
-- `gh` authed as **mattmaiorana** with `repo` + `workflow` scopes — enough to
-  create the repo, push, and cut a release.
-- `main` is the branch; clean. No `origin` remote yet. No git tags yet.
-- Submission assets present: `manifest.json` (id `sidecar`, version `1.1.0`,
-  minAppVersion `1.5.0`, `isDesktopOnly`), `versions.json`, `README.md`,
-  `CHANGELOG.md`, and now `LICENSE`. There is **no `styles.css`** (by design).
-- Plugin **id `sidecar` is free** in the community list (checked the 4,770-entry
-  `obsidianmd/obsidian-releases/community-plugins.json` — no exact `id` match).
-  The *name* "Sidecar" is somewhat generic (≈5 other "sidecar-ish" plugins by
-  name), so reviewers could nudge on it, but it's submittable as-is.
-
-### Phase B — create the GitHub repo (outward-facing)
-```
-gh repo create mattmaiorana/obsidian-sidecar --public --source=. --remote=origin --push
-```
-Creates `origin`, pushes `main`. Must be **public** for community submission.
-
-### Phase C — cut the 1.1.0 release (required before the community PR validates)
-1. `npm run build` → produces `main.js` (git-ignored; built fresh each release).
-2. ```
-   gh release create 1.1.0 main.js manifest.json --title "1.1.0" --notes-file CHANGELOG.md
-   ```
-   - Tag **must equal the manifest version exactly** — `1.1.0`, **no `v` prefix**.
-   - Attach `main.js` + `manifest.json` as **individual binary assets** (the
-     community bot validates release assets, not the source tree). No
-     `styles.css` to attach.
-
-### Phase D — submit to the community plugins list
-**Process likely changed (per user, 2026-06-14):** Obsidian now reportedly lets
-you **link the GitHub repo** and an automated checker reads from it and handles
-the release once it passes — no manual fork/PR. **Confirm the current flow**
-(Obsidian developer docs / submission page) before doing anything below; the
-fork-and-PR steps are kept only as a fallback if the new flow isn't available.
+Facts for the submission:
+- Plugin **id `sidecar`** — verified free in the community list (2026-06-14; no
+  exact `id` match among ~4,770 entries). Name "Sidecar" is a touch generic
+  (≈5 other "sidecar-ish" plugins by name) but submittable.
+- The release tag the bot validates is **`1.2.0`** (matches manifest).
 
 _Fallback (old flow):_ fork `obsidianmd/obsidian-releases`, append to
 `community-plugins.json`, open a PR. Entry:
@@ -59,7 +39,7 @@ _Fallback (old flow):_ fork `obsidianmd/obsidian-releases`, append to
   "name": "Sidecar",
   "author": "Matt Maiorana",
   "description": "Opens a tall, narrow popout window that acts as a portable mini-Obsidian for navigating and editing project notes, while the main app stays untouched.",
-  "repo": "mattmaiorana/obsidian-sidecar"
+  "repo": "mattmaiorana/sidecar"
 }
 ```
 The PR triggers Obsidian's automated validation bot plus a manual review.

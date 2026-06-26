@@ -66,12 +66,14 @@ navigate with the back/forward and home buttons.
 
 Leaving a width or height field empty resets it to the default.
 
-## Install (manual, for local development)
+## Install (manual)
 
-This plugin isn't in the community store. To run it from source:
+Not in the community store yet. To install:
 
-1. Build it (see [Development](#development)) so `main.js` exists.
-2. Copy `main.js` and `manifest.json` into your vault at:
+1. Download `main.js` and `manifest.json` from the
+   [latest release](https://github.com/mattmaiorana/sidecar/releases/latest)
+   (or build `main.js` from source — see [Development](#development)).
+2. Copy both files into your vault at:
    `<your vault>/.obsidian/plugins/sidecar/`
    (there is no `styles.css` — all styling is injected at runtime).
 3. In Obsidian: **Settings → Community plugins**, make sure *Restricted mode* is
