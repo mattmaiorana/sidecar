@@ -64,10 +64,14 @@ export class SidecarLauncherButtons {
 		}
 	}
 
-	/** Detach the button and its styles (called on unload or when disabled). */
+	/**
+	 * Detach the button and its styles (called on unload or when disabled). The
+	 * element reference is kept so a later re-enable reuses it — recreating it
+	 * would register a second click handler (cleaned only on unload). On unload
+	 * the whole instance is discarded, so the kept reference is fine.
+	 */
 	remove(): void {
 		this.stripBtn?.remove();
-		this.stripBtn = null;
 		document.getElementById(STYLE_ID)?.remove();
 	}
 

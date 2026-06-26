@@ -244,7 +244,7 @@ export class SidecarWindowManager {
 
 		// Only offer the pin if the Electron remote API is reachable — otherwise
 		// the button would toggle "active" while doing nothing (a lying UI).
-		if (this.alwaysOnTopSupported()) {
+		if (this.remoteAvailable()) {
 			const pinBtn = bar.createEl("button", {
 				cls: "sidecar-pin-btn clickable-icon",
 				attr: { "aria-label": "Keep window on top" },
@@ -288,11 +288,6 @@ export class SidecarWindowManager {
 		await mainLeaf.openFile(file);
 		this.app.workspace.revealLeaf(mainLeaf);
 		if (win) win.close();
-	}
-
-	/** Whether Electron's remote API (needed for always-on-top) is reachable. */
-	private alwaysOnTopSupported(): boolean {
-		return this.getRemoteModule() !== null;
 	}
 
 	/** Whether Electron's remote module is reachable (pin button + zombie sweep). */
@@ -386,7 +381,7 @@ export class SidecarWindowManager {
 	/**
 	 * Toggle always-on-top for a popout window. The call is injected as a script
 	 * so getCurrentWindow() resolves to the popout's own BrowserWindow rather
-	 * than the main window's. Gated by alwaysOnTopSupported() at the call site,
+	 * than the main window's. Gated by remoteAvailable() at the call site,
 	 * so the remote module is expected to be present here.
 	 */
 	private setAlwaysOnTop(popoutWin: Window, pinned: boolean): void {

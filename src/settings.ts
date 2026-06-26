@@ -204,7 +204,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Re-style popouts on reload")
 			.setDesc(
-				"Re-apply Sidecar styling to popout windows after an Obsidian reload."
+				"Re-apply Sidecar styling to popout windows after an Obsidian reload. Affects every restored popout — turn off if you use native popout windows you want left alone."
 			)
 			.addToggle((toggle) =>
 				toggle
