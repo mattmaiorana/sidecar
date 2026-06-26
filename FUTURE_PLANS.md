@@ -162,6 +162,27 @@ Still parked / known limits:
   leaf-level or settings-level identity (the injected `<style>` / `body` class do
   **not** survive restore — the popout DOM is rebuilt — so a DOM marker won't do).
 
+## Zombie popout cleanup — DONE, but a workaround (revisit if fixed upstream)
+
+**Implemented** as `closeZombiePopouts()` (locked decision #12), gated by the
+`closeZombiePopoutsOnReload` setting (**default off**, remote-gated). It closes the
+dead duplicate popout windows left over after "Reload app without saving" by
+stamping every skinned popout with a per-session token and destroying any window
+carrying a *stale* token.
+
+**This is a workaround for an Obsidian-level bug, not a real fix.** "Reload app
+without saving" reloads the main renderer without closing existing popout
+windows (and plugin `onunload` never fires), then restores fresh ones — so the
+old popouts linger as dead duplicates. This happens **with the plugin disabled
+too**; the proper fix belongs upstream (Obsidian closing/​re-attaching its
+popouts on reload).
+
+**Revisit periodically.** If Obsidian fixes the reload/popout behavior upstream,
+this whole feature can be **removed** — the setting, `closeZombiePopouts()`, and
+the only reason the per-session `data-sidecar-session` token exists. Worth
+filing/upvoting the Obsidian bug so the workaround can eventually retire. Until
+then, keep it (off by default, so it's harmless to users who don't enable it).
+
 ## Other deferred items
 
 - **Search / filter in the list** (if the browser view is restored).

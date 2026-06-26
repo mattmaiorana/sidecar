@@ -181,6 +181,10 @@ from — a durable replacement for the deleted folder-browser view.
       would race re-skin and could kill a live window — the token avoids that.
     - Needs the remote module (like the pin button, #7), so the setting is only
       shown when `remoteAvailable()`.
+    This is a **workaround**, not a real fix — if Obsidian fixes the reload/popout
+    behavior upstream, the whole feature (setting, `closeZombiePopouts()`, and the
+    `data-sidecar-session` token that exists only for it) can be removed. See
+    FUTURE_PLANS.md "Zombie popout cleanup" for the revisit note.
 
 ## API correctness
 
