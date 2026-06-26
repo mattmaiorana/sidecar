@@ -93,7 +93,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 							: ""
 					)
 					.setPlaceholder("Default: 375");
-				text.inputEl.addEventListener("blur", async () => {
+				text.inputEl.addEventListener("blur", () => {
 					const raw = text.getValue().trim();
 					if (raw === "") {
 						this.plugin.settings.defaultWidth = DEFAULT_SETTINGS.defaultWidth;
@@ -111,7 +111,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 							);
 						}
 					}
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				});
 			});
 
@@ -126,7 +126,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 							: ""
 					)
 					.setPlaceholder("Default: 1000");
-				text.inputEl.addEventListener("blur", async () => {
+				text.inputEl.addEventListener("blur", () => {
 					const raw = text.getValue().trim();
 					if (raw === "") {
 						this.plugin.settings.windowHeight = DEFAULT_SETTINGS.windowHeight;
@@ -144,27 +144,27 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 							);
 						}
 					}
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				});
 			});
 
 		new Setting(containerEl)
 			.setName("Default note")
-			.setDesc("Note opened by 'Open default note in Sidecar' and the home button. Path is relative to your vault root.")
+			.setDesc("Note opened by the 'Open default note' command and the home button. Path is relative to your vault root.")
 			.addText((text) => {
 				const suggest = new FileSuggest(this.app, text.inputEl);
-				suggest.onSelect(async (file) => {
+				suggest.onSelect((file) => {
 					suggest.setValue(file.path);
 					suggest.close();
 					this.plugin.settings.defaultNote = file.path;
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				});
 				text
 					.setValue(this.plugin.settings.defaultNote)
 					.setPlaceholder("e.g. Projects/Index.md");
-				text.inputEl.addEventListener("blur", async () => {
+				text.inputEl.addEventListener("blur", () => {
 					this.plugin.settings.defaultNote = text.getValue().trim();
-					await this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				});
 			});
 

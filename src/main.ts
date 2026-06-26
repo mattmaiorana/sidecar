@@ -21,8 +21,8 @@ export default class SidecarBrowserPlugin extends Plugin {
 
 		// Primary entry point.
 		this.addCommand({
-			id: "open-sidecar-browser",
-			name: "Open current note in Sidecar",
+			id: "open-current-note",
+			name: "Open current note",
 			callback: () => {
 				const file = this.app.workspace.getActiveFile();
 				if (!file) {
@@ -34,8 +34,8 @@ export default class SidecarBrowserPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "open-default-note-in-sidecar",
-			name: "Open default note in Sidecar",
+			id: "open-default-note",
+			name: "Open default note",
 			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "S" }],
 			callback: () => {
 				void this.openDefaultNote();
@@ -128,9 +128,11 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// popout windows open as plain popouts.
 		this.windowManager?.teardown();
 		this.launcherButtons?.remove();
-		document.getElementById("sidecar-ribbon-style")?.remove();
-		document.getElementById("sidecar-home-ribbon-style")?.remove();
-		document.getElementById("sidecar-toolbar-style")?.remove();
+		document.body.removeClass(
+			"sidecar-hide-ribbon-btn",
+			"sidecar-hide-home-ribbon-btn",
+			"sidecar-hide-toolbar-btn"
+		);
 	}
 
 	async openDefaultNote(): Promise<void> {
@@ -153,41 +155,22 @@ export default class SidecarBrowserPlugin extends Plugin {
 		await this.windowManager.open(file);
 	}
 
+	// Button visibility is driven by body classes (rules live in styles.css);
+	// toggling a class shows/hides the matching button.
 	updateHomeRibbonStyle(): void {
-		const STYLE_ID = "sidecar-home-ribbon-style";
-		document.getElementById(STYLE_ID)?.remove();
-		if (!this.settings.showHomeRibbonButton) {
-			const el = document.createElement("style");
-			el.id = STYLE_ID;
-			el.textContent = `.sidecar-home-ribbon-btn { display: none !important; }`;
-			document.head.appendChild(el);
-		}
+		document.body.toggleClass("sidecar-hide-home-ribbon-btn", !this.settings.showHomeRibbonButton);
 	}
 
 	updateRibbonStyle(): void {
-		const STYLE_ID = "sidecar-ribbon-style";
-		document.getElementById(STYLE_ID)?.remove();
-		if (!this.settings.showRibbonButton) {
-			const el = document.createElement("style");
-			el.id = STYLE_ID;
-			el.textContent = `.sidecar-ribbon-btn { display: none !important; }`;
-			document.head.appendChild(el);
-		}
+		document.body.toggleClass("sidecar-hide-ribbon-btn", !this.settings.showRibbonButton);
 	}
 
 	updateToolbarStyle(): void {
-		const STYLE_ID = "sidecar-toolbar-style";
-		document.getElementById(STYLE_ID)?.remove();
-		if (!this.settings.showToolbarButton) {
-			const el = document.createElement("style");
-			el.id = STYLE_ID;
-			el.textContent = `.sidecar-toolbar-btn { display: none !important; }`;
-			document.head.appendChild(el);
-		}
+		document.body.toggleClass("sidecar-hide-toolbar-btn", !this.settings.showToolbarButton);
 	}
 
 	async loadSettings(): Promise<void> {
-		const data = await this.loadData();
+		const data = (await this.loadData()) as Partial<SidecarBrowserSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 	}
 

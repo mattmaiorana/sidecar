@@ -1,0 +1,43 @@
+/*
+ * Sidecar — main-window styles.
+ *
+ * Obsidian loads this file for us (no runtime <style> injection in the main
+ * window). It only styles Sidecar's own elements, all `sidecar-*`-prefixed, so
+ * it never affects the rest of Obsidian. The popout chrome is styled separately
+ * (injected into each popout's own <head> in window-manager.ts), since that has
+ * to be scoped per-popout and must not skin the user's own popout windows.
+ */
+
+/* Per-button visibility — toggled via body classes from settings. */
+body.sidecar-hide-ribbon-btn .sidecar-ribbon-btn,
+body.sidecar-hide-home-ribbon-btn .sidecar-home-ribbon-btn,
+body.sidecar-hide-toolbar-btn .sidecar-toolbar-btn {
+	display: none !important;
+}
+
+/*
+ * Left-sidebar launcher button — matched to the sidebar tabs so it reads as a
+ * natural item in the strip: a 25px-tall tab-radius pill, 8px sides and an 18px
+ * icon (the measured 34x25 tab-inner box), a small left margin for the inter-tab
+ * gap, centered so it doesn't stretch, faint by default and bright on hover.
+ */
+.sidecar-launcher-strip-btn.clickable-icon {
+	align-self: center;
+	height: 25px;
+	margin-left: var(--size-2-1);
+	padding: 0 8px;
+	border-radius: var(--tab-radius);
+	color: var(--icon-color);
+	opacity: var(--icon-opacity);
+}
+
+.sidecar-launcher-strip-btn.clickable-icon:hover {
+	color: var(--icon-color-hover);
+	opacity: var(--icon-opacity-hover);
+	background-color: var(--background-modifier-hover);
+}
+
+.sidecar-launcher-strip-btn.clickable-icon .svg-icon {
+	width: 18px;
+	height: 18px;
+}

@@ -9,14 +9,15 @@ const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
 export const SIDECAR_BUILD = "1.2.0";
 
-/** Minimal shapes of the Electron remote APIs the zombie sweep relies on. */
+/** Minimal shapes of the Electron remote APIs we rely on (pin + zombie sweep). */
 interface RemoteBrowserWindow {
 	id: number;
 	isDestroyed(): boolean;
 	destroy(): void;
+	setAlwaysOnTop(flag: boolean, level?: string): void;
 	webContents: { executeJavaScript(code: string): Promise<unknown> };
 }
-interface ZombieSweepRemote {
+interface RemoteModule {
 	getCurrentWindow(): RemoteBrowserWindow;
 	BrowserWindow: { getAllWindows(): RemoteBrowserWindow[] };
 }
@@ -286,7 +287,7 @@ export class SidecarWindowManager {
 		if (anchor) this.app.workspace.setActiveLeaf(anchor, { focus: false });
 		const mainLeaf = this.app.workspace.getLeaf("tab");
 		await mainLeaf.openFile(file);
-		this.app.workspace.revealLeaf(mainLeaf);
+		void this.app.workspace.revealLeaf(mainLeaf);
 		if (win) win.close();
 	}
 
@@ -312,7 +313,7 @@ export class SidecarWindowManager {
 	 */
 	closeZombiePopouts(): void {
 		if (!this.plugin.settings.closeZombiePopoutsOnReload) return;
-		const remote = this.getRemoteModule() as unknown as ZombieSweepRemote | null;
+		const remote = this.getRemoteModule() as unknown as RemoteModule | null;
 		if (!remote || typeof remote.BrowserWindow?.getAllWindows !== "function") return;
 		let currentId: number;
 		let windows: RemoteBrowserWindow[];
@@ -379,23 +380,40 @@ export class SidecarWindowManager {
 	}
 
 	/**
-	 * Toggle always-on-top for a popout window. The call is injected as a script
-	 * so getCurrentWindow() resolves to the popout's own BrowserWindow rather
-	 * than the main window's. Gated by remoteAvailable() at the call site,
-	 * so the remote module is expected to be present here.
+	 * Toggle always-on-top for a popout window. We resolve the popout's *own*
+	 * BrowserWindow through its renderer's `require` — each window's
+	 * `@electron/remote` is bound to its own webContents, so `getCurrentWindow()`
+	 * returns this popout rather than the main window. Using the popout's require
+	 * (instead of injecting a `<script>`) keeps this free of dynamic code
+	 * execution. Gated by `remoteAvailable()` at the call site.
 	 */
 	private setAlwaysOnTop(popoutWin: Window, pinned: boolean): void {
 		try {
-			const script = popoutWin.document.createElement("script");
-			script.textContent = `(function(){
-				var r=typeof require!=="undefined"?require:null;if(!r)return;
-				var m=null;
-				try{m=r("@electron/remote")}catch(e){}
-				if(!m)try{m=r("electron").remote}catch(e){}
-				if(m)m.getCurrentWindow().setAlwaysOnTop(${pinned},"floating");
-			})();`;
-			popoutWin.document.head.appendChild(script);
-			script.remove();
+			const req = (popoutWin as unknown as { require?: (id: string) => unknown })
+				.require;
+			if (typeof req !== "function") return;
+			let remote: { getCurrentWindow?: () => RemoteBrowserWindow } | null = null;
+			try {
+				const m = req("@electron/remote") as {
+					getCurrentWindow?: () => RemoteBrowserWindow;
+				};
+				if (m && typeof m.getCurrentWindow === "function") remote = m;
+			} catch {
+				/* not available */
+			}
+			if (!remote) {
+				try {
+					const e = req("electron") as {
+						remote?: { getCurrentWindow?: () => RemoteBrowserWindow };
+					};
+					if (e?.remote && typeof e.remote.getCurrentWindow === "function") {
+						remote = e.remote;
+					}
+				} catch {
+					/* not available */
+				}
+			}
+			remote?.getCurrentWindow?.().setAlwaysOnTop(pinned, "floating");
 		} catch (e) {
 			console.warn("[Sidecar] setAlwaysOnTop failed:", e);
 		}
