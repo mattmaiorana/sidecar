@@ -15,9 +15,9 @@ these without a conscious decision to expand scope.
   <https://github.com/mattmaiorana/sidecar/releases/tag/1.2.0> — tag `1.2.0` (no
   `v` prefix), `main.js` + `manifest.json` attached as individual assets (no
   `styles.css`, by design).
-- Pre-flight: `LICENSE` (MIT) added; `package.json` `"name"` is `obsidian-sidecar`
-  (Obsidian ignores it; left as-is — only the *GitHub repo* was renamed to
-  `sidecar`).
+- Pre-flight: `LICENSE` (MIT) added; `package.json` `"name"` is `sidecar` (matches
+  the repo + plugin id). The local working folder stays `obsidian-sidecar` (the
+  GitHub slug, package name, and id are all independent of it).
 
 ### Remaining — Phase D: submit to the community plugins list
 **Confirm the current flow first** (Obsidian developer docs / submission page).

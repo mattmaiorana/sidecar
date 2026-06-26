@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-sidecar",
+	"name": "sidecar",
 	"version": "1.2.0",
 	"description": "A simplified Obsidian popout window for navigating and editing project notes while the main window stays untouched.",
 	"main": "main.js",
