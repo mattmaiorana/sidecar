@@ -15,9 +15,11 @@ import type SidecarBrowserPlugin from "./main";
  *
  * This reaches into Obsidian's chrome DOM, which has no public API — so mounting
  * is defensive (bails if the strip is missing) and idempotent, and `mount()` is
- * re-run on layout changes since Obsidian rebuilds that container. We target the
- * main-window `document` on purpose (the left sidebar lives there, not in a
- * popout), so `activeDocument` would be wrong here.
+ * re-run on layout changes since Obsidian rebuilds that container. `mount()` only
+ * runs when the main window is active (startup, settings changes, and the
+ * sidebar/layout rebuilds that wipe the button are all main-window events), so
+ * `activeDocument` resolves to the main document; if a popout happens to be
+ * active the query finds nothing and the existing button is left in place.
  */
 export class SidecarLauncherButtons {
 	private plugin: SidecarBrowserPlugin;
@@ -33,7 +35,7 @@ export class SidecarLauncherButtons {
 			this.remove();
 			return;
 		}
-		const container = document.querySelector(
+		const container = activeDocument.querySelector(
 			".workspace-split.mod-left-split .workspace-tab-header-container"
 		);
 		if (!container) return;

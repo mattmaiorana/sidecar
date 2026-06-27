@@ -5,6 +5,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.3]
+
+Community plugin directory compliance — no feature changes.
+
+### Changed
+- Cleared the last two flagged `document` references: the sidebar launcher now
+  uses `activeDocument`, and popout detection compares windows instead of the
+  global document.
+
+---
+
 ## [1.2.2]
 
 More community plugin directory compliance — no feature changes.

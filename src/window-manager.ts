@@ -7,7 +7,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 /** id of the <style> element we inject into each popout's <head>. */
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
-export const SIDECAR_BUILD = "1.2.2";
+export const SIDECAR_BUILD = "1.2.3";
 
 /** Minimal shapes of the Electron remote APIs we rely on (pin + zombie sweep). */
 interface RemoteBrowserWindow {
@@ -428,12 +428,15 @@ export class SidecarWindowManager {
 	}
 
 	/** The popout's Document, preferring the container API and falling back to
-	 *  the view's ownerDocument for the brief window before the container wires up. */
+	 *  the view's ownerDocument for the brief window before the container wires
+	 *  up. The fallback returns the doc only if it belongs to a *different* window
+	 *  than this (main) renderer — i.e. a popout — comparing windows rather than
+	 *  the global `document` (which `activeDocument` would wrongly shadow here). */
 	private popoutDocFor(leaf: WorkspaceLeaf): Document | null {
 		const container = leaf.getContainer();
 		if (container instanceof WorkspaceWindow) return container.doc;
 		const viaView = leaf.view?.containerEl?.ownerDocument ?? null;
-		return viaView && viaView !== document ? viaView : null;
+		return viaView && viaView.defaultView !== window ? viaView : null;
 	}
 
 	/** The popout's DOM Window (defaultView of its document), or null. */
