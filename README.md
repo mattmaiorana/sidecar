@@ -113,12 +113,17 @@ npm run build      # typecheck + minified production build
 npm run typecheck  # type-check only
 ```
 
-The build output is `main.js` in the repo root (git-ignored). For live testing,
-copy `main.js` and `manifest.json` into your vault's
-`.obsidian/plugins/sidecar/` folder and reload the plugin in Obsidian
-(Cmd+P → "Reload app without saving") after each rebuild. You can confirm the
-live build by opening the popout's developer console and reading
-`document.body.dataset.sidecarBuild`.
+The build output is `main.js` in the repo root (git-ignored); `manifest.json` and
+`styles.css` are checked in. For live testing, copy `main.js`, `manifest.json`,
+and `styles.css` into your vault's `.obsidian/plugins/sidecar/` folder and reload
+the plugin in Obsidian (Cmd+P → "Reload app without saving") after each rebuild.
+You can confirm the live build by opening the popout's developer console and
+reading `document.body.dataset.sidecarBuild`.
+
+Releases are published automatically by `.github/workflows/release.yml` when a
+version tag (matching the manifest version, no `v` prefix) is pushed — it builds,
+attaches build-provenance attestations, and uploads `main.js` + `manifest.json` +
+`styles.css`.
 
 `isDesktopOnly: true` — popout windows are a desktop-only feature.
 

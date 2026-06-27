@@ -163,9 +163,11 @@ from — a durable replacement for the deleted folder-browser view.
       rebuilds that inner container's children when switching sidebar tabs, which
       wipes the button (flicker, then gone). The spacer slot is a stable sibling.
     - Mounting is defensive + idempotent and is **re-run on `layout-change`**
-      (Obsidian rebuilds the strip); the button is removed in `onunload`.
-    - Its look is matched to the tabs via an injected `<style>` (`document.head`,
-      id `sidecar-launcher-strip-style`): 25px tall, `0 8px` padding, 18px icon
+      (Obsidian rebuilds the strip); the button is removed in `onunload`. The
+      container is queried via `activeDocument` (mount only ever runs with the
+      main window active — see the file comment).
+    - Its look is matched to the tabs in **`styles.css`** (`.sidecar-launcher-strip-btn`,
+      not an injected `<style>` — see #4): 25px tall, `0 8px` padding, 18px icon
       (→ the measured 34×25 tab-inner box), `var(--tab-radius)`, a
       `var(--size-2-1)` left margin for the inter-tab gap, faint→bright on hover.
     This is a deliberate, ribbon-hidden-only convenience; it reaches into another

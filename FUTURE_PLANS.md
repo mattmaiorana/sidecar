@@ -5,44 +5,37 @@ these without a conscious decision to expand scope.
 
 ---
 
-## Up next — submit to the Obsidian community list
+## Submission to the Obsidian community list — review clean, awaiting listing
 
 ### Done
-- **Repo created + pushed** (2026-06-26): **`mattmaiorana/sidecar`** (public;
-  renamed from the initial `obsidian-sidecar` to drop the `obsidian-` prefix, for
-  consistency with the user's other repos). `origin` tracks `main`.
-- **`1.2.0` released** (2026-06-26):
-  <https://github.com/mattmaiorana/sidecar/releases/tag/1.2.0> — tag `1.2.0` (no
-  `v` prefix), `main.js` + `manifest.json` attached as individual assets (no
-  `styles.css`, by design).
-- Pre-flight: `LICENSE` (MIT) added; `package.json` `"name"` is `sidecar` (matches
-  the repo + plugin id). The local working folder stays `obsidian-sidecar` (the
-  GitHub slug, package name, and id are all independent of it).
+- **Repo + releases:** public **`mattmaiorana/sidecar`** (renamed from the initial
+  `obsidian-sidecar` to drop the prefix; the local folder stays `obsidian-sidecar`,
+  independent of the slug/package name/id, which are all `sidecar`). `LICENSE`
+  (MIT) present. Releases **1.2.0 → 1.2.3**; from 1.2.1 on they're cut by
+  `.github/workflows/release.yml` on a version-tag push — builds + build-provenance
+  attestations + publishes `main.js` + `manifest.json` + `styles.css`.
+- **Directory review is clean (at v1.2.3, 2026-06-27):** no errors or warnings,
+  only the benign **"Vault Enumeration"** *recommendation* — inherent to the
+  default-note autocomplete (`getMarkdownFiles()` behind `AbstractInputSuggest`); a
+  behavior disclosure, not a defect, nothing to fix. The three review rounds
+  shipped: `styles.css` for main-window styles, pin without a `<script>`,
+  command/description/heading cleanup, `setActiveLeaf` (not `revealLeaf`), no
+  `!important`, no default hotkey, and `activeDocument`.
 
-### Remaining — Phase D: submit to the community plugins list
-**Confirm the current flow first** (Obsidian developer docs / submission page).
-Per the user (2026-06-14), Obsidian reportedly lets you **link the GitHub repo**
-and an automated checker reads from it — no manual fork/PR. The fork-and-PR path
-below is the fallback if that flow isn't available.
+### Remaining
+Just the directory's own acceptance/listing of the submission — on their side.
 
-Facts for the submission:
-- Plugin **id `sidecar`** — verified free in the community list (2026-06-14; no
-  exact `id` match among ~4,770 entries). Name "Sidecar" is a touch generic
-  (≈5 other "sidecar-ish" plugins by name) but submittable.
-- The release tag the bot validates is **`1.2.0`** (matches manifest).
-
-_Fallback (old flow):_ fork `obsidianmd/obsidian-releases`, append to
-`community-plugins.json`, open a PR. Entry:
+For reference — id **`sidecar`** was verified free; the community-plugins.json
+entry (if the manual fork/PR fallback is ever needed):
 ```json
 {
   "id": "sidecar",
   "name": "Sidecar",
   "author": "Matt Maiorana",
-  "description": "A simplified Obsidian popout window for navigating and editing project notes while the main window stays untouched.",
+  "description": "A simplified popout window for navigating and editing project notes while the main window stays untouched.",
   "repo": "mattmaiorana/sidecar"
 }
 ```
-The PR triggers Obsidian's automated validation bot plus a manual review.
 
 ---
 
@@ -103,7 +96,8 @@ Two viable mechanisms (treat as opt-in, remote-gated like the pin button):
   - Only *acts* while Obsidian is running; it won't relaunch Obsidian if quit.
 
 - **System-wide hotkey: `remote.globalShortcut`.** Fires even when Obsidian is
-  unfocused (today's `Mod+Shift+S` only works when Obsidian has focus). No icon
+  unfocused (a normal Obsidian hotkey — the user's own binding for the
+  "Open default note" command — only works when Obsidian has focus). No icon
   to manage; lighter than a Tray. Pairs well *with* the Tray (icon for
   discoverability, hotkey for speed). Must `unregister` on unload.
 
