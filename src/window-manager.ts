@@ -7,7 +7,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 /** id of the <style> element we inject into each popout's <head>. */
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
-export const SIDECAR_BUILD = "1.2.1";
+export const SIDECAR_BUILD = "1.2.2";
 
 /** Minimal shapes of the Electron remote APIs we rely on (pin + zombie sweep). */
 interface RemoteBrowserWindow {
@@ -73,7 +73,7 @@ export class SidecarWindowManager {
 
 		await leaf.openFile(file, { active: true });
 		this.decorateHeader(leaf);
-		await this.app.workspace.revealLeaf(leaf);
+		this.app.workspace.setActiveLeaf(leaf, { focus: true });
 
 		this.pendingPopout = false;
 		this.schedulePopoutSetup(leaf, true);
@@ -287,7 +287,7 @@ export class SidecarWindowManager {
 		if (anchor) this.app.workspace.setActiveLeaf(anchor, { focus: false });
 		const mainLeaf = this.app.workspace.getLeaf("tab");
 		await mainLeaf.openFile(file);
-		void this.app.workspace.revealLeaf(mainLeaf);
+		this.app.workspace.setActiveLeaf(mainLeaf, { focus: true });
 		if (win) win.close();
 	}
 

@@ -32,18 +32,19 @@ from — a durable replacement for the deleted folder-browser view.
 
 3. **Entry points.** Two notes can be targeted: the **active** note and the
    configured **default** note (`settings.defaultNote`).
-   - *Active note:* command "Open current note in Sidecar"; ribbon button
-     (`arrow-up-right`); right-click `.md` in file tree → "Open in
+   - *Active note:* command "Open current note" (id `open-current-note`); ribbon
+     button (`arrow-up-right`); right-click `.md` in file tree → "Open in
      Sidecar"; `arrow-up-right` action button injected into every
      main-window `MarkdownView` toolbar (via `active-leaf-change`, guarded to
      skip popout leaves).
-   - *Default note:* command "Open default note in Sidecar" (bound by default to
-     **`Mod+Shift+S`**); ribbon button (`file-text`); and a one-click
+   - *Default note:* command "Open default note" (id `open-default-note`); ribbon
+     button (`file-text`); and a one-click
      `file-text` button injected into the **left sidebar tab-header strip**
      (`SidecarLauncherButtons` in `launcher-button.ts`, for users who hide the
-     ribbon — see #11). `openDefaultNote()` opens
+     ribbon — see #11). **No default hotkey** (community review forbids them; the
+     user assigns one in Settings → Hotkeys if desired). `openDefaultNote()` opens
      `settings.defaultNote` if set and resolvable, else **falls back to the
-     active note** (so the hotkey is never a dead end); a missing configured path
+     active note** (so it's never a dead end); a missing configured path
      shows a Notice.
    All paths call `windowManager.open(file)`, which closes any main-window copy of
    the file first (pop-out mode) and then creates a fresh popout window.
@@ -210,7 +211,10 @@ names. Key APIs this plugin depends on:
 - `View.containerEl` (we inject our bar here); `setIcon(parent, iconId)`.
 - `Plugin.registerDomEvent` (has a `Window` overload), `registerEvent`;
   `workspace.on('window-close', ...)`, `workspace.on('window-open', ...)`.
-- `Plugin.addCommand({ hotkeys })` for the default `Mod+Shift+S` binding.
+- `Plugin.addCommand` — **no `hotkeys`** field (community review forbids default
+  hotkeys; users bind their own in Settings → Hotkeys).
+- `Workspace.setActiveLeaf(leaf, { focus })` to focus a leaf — used instead of
+  `revealLeaf` (whose async signature trips `no-unsupported-api` vs minAppVersion).
 - `AbstractInputSuggest<T>` for the default-note path autocomplete in settings.
   **Gotcha:** the right API is `getSuggestions` + `renderSuggestion` + the
   instance method `onSelect(cb)`. There is **no** `onChooseSuggestion` override
@@ -222,8 +226,8 @@ names. Key APIs this plugin depends on:
 
 ```
 manifest.json       plugin metadata (id, isDesktopOnly)
-src/main.ts         Plugin entry: load settings, commands (incl. default-note +
-                    hotkey), both ribbon buttons, event wiring, openDefaultNote().
+src/main.ts         Plugin entry: load settings, commands (no default hotkeys),
+                    both ribbon buttons, event wiring, openDefaultNote().
 src/window-manager.ts  Manages all popout windows: open, mark, header (nav/home/
                     pop-in/pin buttons), navigate/goHome, sizing, teardown. Owns
                     the injected popout CSS. Holds the SIDECAR_BUILD stamp.

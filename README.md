@@ -18,9 +18,9 @@ alongside other apps more easily than the main Obsidian interface.
 - Open a note in a Sidecar via a command, a ribbon icon, a file-tree
   right-click, or the action button in any note's toolbar.
 - There are **two targets**: the **current** note (whatever's active) and a
-  configurable **default note**. The default note has its own command, hotkey,
-  ribbon button, and a button in the left sidebar's tab bar — open your index
-  from anywhere with one click or keystroke.
+  configurable **default note**. The default note has its own command, ribbon
+  button, and a button in the left sidebar's tab bar — open your index from
+  anywhere with one click (or a hotkey you assign).
 - Opening a note that's already open in the main window **closes the main-window
   copy first** (pop-out mode), so you're never looking at two copies of the same
   note at once.
@@ -49,7 +49,7 @@ alongside other apps more easily than the main Obsidian interface.
 |---|---|---|
 | Sidecar width | 375 px | Width of new Sidecar windows. Valid range: 200–1200 px. |
 | Sidecar height | 1000 px | Height of new Sidecar windows. Valid range: 300–3000 px. |
-| Default note | *(empty)* | Path (vault-relative) opened by the default-note command, hotkey, ribbon button, and the home button. Type to autocomplete from your notes. Empty = those actions fall back to the current note. |
+| Default note | *(empty)* | Path (vault-relative) opened by the default-note command, ribbon button, and the home button. Type to autocomplete from your notes. Empty = those actions fall back to the current note. |
 | Make text smaller | On | Scales note content to 14 px. Inline title: 18 px. Headings scale from h1 (18 px) down to h4–h6 (14 px). Code blocks and inline code: 13 px. Callout titles and properties panel: 14 px. |
 | Make padding smaller | On | Tightens the note's content padding for a denser column feel. |
 | Show 'open current note' ribbon button | On | The `arrow-up-right` ribbon button that opens the active note. |
@@ -81,15 +81,15 @@ Not in the community store yet. To install:
 
 Open the **current** note in a Sidecar any of these ways:
 
-- The command **"Open current note in Sidecar"** (command palette).
+- The command **"Open current note"** (command palette).
 - The **ribbon icon** (`arrow-up-right`) in Obsidian's left ribbon.
 - **Right-click a `.md` file** in the file tree → "Open in Sidecar".
 - The **action button** (`arrow-up-right`) in any note's editor toolbar.
 
 Open your **default** note in a Sidecar:
 
-- The command **"Open default note in Sidecar"** — bound by default to
-  **`Cmd/Ctrl+Shift+S`** (rebindable in Obsidian's Hotkeys settings).
+- The command **"Open default note"** — assign a hotkey to it in
+  **Settings → Hotkeys** if you like (no default is set).
 - The **ribbon icon** (`file-text`) in Obsidian's left ribbon.
 - The **left-sidebar button** (`file-text`) in the sidebar's tab bar, next to
   Files/Search (handy if you keep the ribbon hidden).

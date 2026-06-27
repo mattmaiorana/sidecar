@@ -12,7 +12,7 @@
 body.sidecar-hide-ribbon-btn .sidecar-ribbon-btn,
 body.sidecar-hide-home-ribbon-btn .sidecar-home-ribbon-btn,
 body.sidecar-hide-toolbar-btn .sidecar-toolbar-btn {
-	display: none !important;
+	display: none;
 }
 
 /*

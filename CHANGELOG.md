@@ -5,6 +5,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.2]
+
+More community plugin directory compliance — no feature changes.
+
+### Changed
+- Removed the default `Cmd/Ctrl+Shift+S` hotkey (Obsidian discourages bundling
+  default hotkeys). The **"Open default note"** command still exists — assign your
+  own key in **Settings → Hotkeys** if you want one.
+- Replaced `revealLeaf` with `setActiveLeaf` (avoids an API newer than the
+  declared `minAppVersion`).
+- Dropped `!important` from the button-visibility CSS, and the main-window
+  body-class toggles now use `activeDocument`.
+
+---
+
 ## [1.2.1]
 
 Community plugin directory compliance — no feature changes.

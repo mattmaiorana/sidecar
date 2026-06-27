@@ -36,7 +36,6 @@ export default class SidecarBrowserPlugin extends Plugin {
 		this.addCommand({
 			id: "open-default-note",
 			name: "Open default note",
-			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "S" }],
 			callback: () => {
 				void this.openDefaultNote();
 			},
@@ -128,7 +127,7 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// popout windows open as plain popouts.
 		this.windowManager?.teardown();
 		this.launcherButtons?.remove();
-		document.body.removeClass(
+		activeDocument.body.removeClass(
 			"sidecar-hide-ribbon-btn",
 			"sidecar-hide-home-ribbon-btn",
 			"sidecar-hide-toolbar-btn"
@@ -158,15 +157,15 @@ export default class SidecarBrowserPlugin extends Plugin {
 	// Button visibility is driven by body classes (rules live in styles.css);
 	// toggling a class shows/hides the matching button.
 	updateHomeRibbonStyle(): void {
-		document.body.toggleClass("sidecar-hide-home-ribbon-btn", !this.settings.showHomeRibbonButton);
+		activeDocument.body.toggleClass("sidecar-hide-home-ribbon-btn", !this.settings.showHomeRibbonButton);
 	}
 
 	updateRibbonStyle(): void {
-		document.body.toggleClass("sidecar-hide-ribbon-btn", !this.settings.showRibbonButton);
+		activeDocument.body.toggleClass("sidecar-hide-ribbon-btn", !this.settings.showRibbonButton);
 	}
 
 	updateToolbarStyle(): void {
-		document.body.toggleClass("sidecar-hide-toolbar-btn", !this.settings.showToolbarButton);
+		activeDocument.body.toggleClass("sidecar-hide-toolbar-btn", !this.settings.showToolbarButton);
 	}
 
 	async loadSettings(): Promise<void> {
