@@ -4,18 +4,15 @@ import type SidecarBrowserPlugin from "./main";
 const MAX_SUGGESTIONS = 200;
 
 class FileSuggest extends AbstractInputSuggest<TFile> {
-	// Enumerate with getAllLoadedFiles() and filter to markdown TFiles ourselves.
-	// This is the equivalent that keeps the directory's file-list-method check
-	// from flagging the suggester; result is identical (markdown files matching).
-	// Don't switch this back to the more direct vault list helpers — their method
-	// names are what the checker matches (even inside a comment).
+	// getMarkdownFiles() is the natural API here — a pre-filtered markdown list,
+	// not the whole vault (files + folders) filtered by hand. The directory checker
+	// flags it as "vault enumeration", but that's a non-blocking recommendation and
+	// reading the file list is inherent to any file picker; the getAllLoadedFiles()
+	// detour was the same enumeration renamed and didn't clear the flag anyway.
 	getSuggestions(query: string): TFile[] {
 		const lower = query.toLowerCase();
-		return this.app.vault.getAllLoadedFiles()
-			.filter((f): f is TFile =>
-				f instanceof TFile &&
-				f.extension === "md" &&
-				f.path.toLowerCase().includes(lower))
+		return this.app.vault.getMarkdownFiles()
+			.filter((f) => f.path.toLowerCase().includes(lower))
 			.sort((a, b) => a.path.localeCompare(b.path))
 			.slice(0, MAX_SUGGESTIONS);
 	}

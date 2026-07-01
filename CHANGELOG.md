@@ -5,6 +5,18 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.7]
+
+### Changed
+- Settings default-note autocomplete reads the pre-filtered markdown list again
+  (reverting the 1.2.5 detour that hand-filtered the full loaded-file list). The
+  detour existed only to try to clear the plugin directory's file-enumeration
+  recommendation, which it never did; the pre-filtered list is the purpose-built
+  API for a file picker, is cheaper, and reads more clearly. Suggestions are now
+  also sorted by path. The directory recommendation is non-blocking and stays.
+
+---
+
 ## [1.2.6]
 
 ### Fixed

@@ -1,7 +1,7 @@
 {
 	"id": "sidecar",
 	"name": "Sidecar",
-	"version": "1.2.6",
+	"version": "1.2.7",
 	"minAppVersion": "1.5.11",
 	"description": "A simplified popout window for navigating and editing project notes while the main window stays untouched.",
 	"author": "Matt Maiorana",
