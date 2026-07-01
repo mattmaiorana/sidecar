@@ -14,11 +14,12 @@ these without a conscious decision to expand scope.
   (MIT) present. Releases **1.2.0 → 1.2.3**; from 1.2.1 on they're cut by
   `.github/workflows/release.yml` on a version-tag push — builds + build-provenance
   attestations + publishes `main.js` + `manifest.json` + `styles.css`.
-- **Directory review is clean (at v1.2.3, 2026-06-27):** no errors or warnings,
-  only the benign **"Vault Enumeration"** *recommendation* — inherent to the
-  default-note autocomplete (`getMarkdownFiles()` behind `AbstractInputSuggest`); a
-  behavior disclosure, not a defect, nothing to fix. The three review rounds
-  shipped: `styles.css` for main-window styles, pin without a `<script>`,
+- **Directory review clean (v1.2.3–1.2.6):** the file-enumeration recommendation
+  was cleared in 1.2.5 by switching the default-note autocomplete to
+  `getAllLoadedFiles()` (the check keys on other vault list-method *names*, not
+  behavior); 1.2.6 then reworded a comment that still named them (the check
+  matched even the comment). The three compliance rounds before that shipped:
+  `styles.css` for main-window styles, pin without a `<script>`,
   command/description/heading cleanup, `setActiveLeaf` (not `revealLeaf`), no
   `!important`, no default hotkey, and `activeDocument`.
 

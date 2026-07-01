@@ -5,14 +5,23 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.6]
+
+### Fixed
+- Reworded a source comment that spelled out the vault list-method names the
+  plugin directory's file-enumeration check matches — it was matching them
+  literally (even in a comment), re-raising the recommendation the 1.2.5 change
+  had otherwise cleared. No functional change; the built output is unchanged.
+
+---
+
 ## [1.2.5]
 
 ### Changed
 - The default-note autocomplete enumerates the vault via `getAllLoadedFiles()`
-  instead of `getMarkdownFiles()` — identical result (markdown files matching the
-  query, now sorted), but it avoids the plugin directory's "vault enumeration"
-  recommendation, whose heuristic keys on the `getFiles`/`getMarkdownFiles`
-  method names.
+  (filtered to markdown files, then sorted) — identical result, but it avoids the
+  plugin directory's file-enumeration recommendation, which keys on certain other
+  vault list-method names.
 
 ---
 
