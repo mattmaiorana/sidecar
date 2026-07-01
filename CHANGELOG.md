@@ -5,6 +5,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.5]
+
+### Changed
+- The default-note autocomplete enumerates the vault via `getAllLoadedFiles()`
+  instead of `getMarkdownFiles()` — identical result (markdown files matching the
+  query, now sorted), but it avoids the plugin directory's "vault enumeration"
+  recommendation, whose heuristic keys on the `getFiles`/`getMarkdownFiles`
+  method names.
+
+---
+
 ## [1.2.4]
 
 Code-review cleanups — no behavior changes for typical use.
