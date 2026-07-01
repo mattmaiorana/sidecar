@@ -5,6 +5,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.4]
+
+Code-review cleanups — no behavior changes for typical use.
+
+### Changed
+- The "Show … ribbon button" / "Show toolbar button" toggles now hide reliably:
+  the CSS wins on selector specificity instead of relying on cascade order.
+- Disabling the plugin now leaves no trace — `teardown()` also removes the
+  per-button hide styles and the toolbar action buttons it had added.
+- Internal: consolidated the four bar-button style methods into one table-driven
+  pair, unified the Electron remote-module resolution shared by the pin button
+  and the zombie sweep, and tightened a couple of type casts.
+
+---
+
 ## [1.2.3]
 
 Community plugin directory compliance — no feature changes.

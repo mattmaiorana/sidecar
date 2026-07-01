@@ -1,5 +1,6 @@
 import { MarkdownView, TFile, WorkspaceLeaf, WorkspaceWindow, setIcon } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
+import type { SidecarBrowserSettings } from "./settings";
 
 /** Class added to the popout window's <body> — debug/inspection only; the
  *  injected styles below do not depend on it. */
@@ -7,7 +8,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 /** id of the <style> element we inject into each popout's <head>. */
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
-export const SIDECAR_BUILD = "1.2.3";
+export const SIDECAR_BUILD = "1.2.4";
 
 /** Minimal shapes of the Electron remote APIs we rely on (pin + zombie sweep). */
 interface RemoteBrowserWindow {
@@ -21,6 +22,29 @@ interface RemoteModule {
 	getCurrentWindow(): RemoteBrowserWindow;
 	BrowserWindow: { getAllWindows(): RemoteBrowserWindow[] };
 }
+
+/** The boolean-valued keys of the settings — the ones a visibility toggle uses. */
+type BoolSettingKey = {
+	[K in keyof SidecarBrowserSettings]: SidecarBrowserSettings[K] extends boolean
+		? K
+		: never;
+}[keyof SidecarBrowserSettings];
+
+/**
+ * The popout-bar buttons whose visibility a setting controls. Each is hidden by
+ * injecting a `<style id>` into the popout head when its setting is off (the bar
+ * buttons live in the popout, so this can't move to the main-window styles.css).
+ */
+const BAR_BUTTON_STYLES: ReadonlyArray<{
+	id: string;
+	selector: string;
+	setting: BoolSettingKey;
+}> = [
+	{ id: "sidecar-pin-style", selector: ".sidecar-pin-btn", setting: "showPinButton" },
+	{ id: "sidecar-popin-style", selector: ".sidecar-popin-btn", setting: "showPopInButton" },
+	{ id: "sidecar-nav-style", selector: ".sidecar-nav-btn", setting: "showNavButtons" },
+	{ id: "sidecar-home-style", selector: ".sidecar-home-btn", setting: "showHomeButton" },
+];
 
 
 /**
@@ -177,6 +201,7 @@ export class SidecarWindowManager {
 			const doc = this.popoutDocFor(leaf);
 			if (doc) {
 				doc.getElementById(STYLE_ID)?.remove();
+				for (const { id } of BAR_BUTTON_STYLES) doc.getElementById(id)?.remove();
 				doc.body.classList.remove(POPOUT_BODY_CLASS);
 				delete doc.body.dataset.sidecarBuild;
 				delete doc.body.dataset.sidecarSession;
@@ -269,7 +294,8 @@ export class SidecarWindowManager {
 	private closeMainWindowCopies(file: TFile): void {
 		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
 			if (leaf.getContainer() instanceof WorkspaceWindow) continue;
-			if ((leaf.view as MarkdownView).file === file) leaf.detach();
+			const view = leaf.view;
+			if (view instanceof MarkdownView && view.file === file) leaf.detach();
 		}
 	}
 
@@ -293,7 +319,7 @@ export class SidecarWindowManager {
 
 	/** Whether Electron's remote module is reachable (pin button + zombie sweep). */
 	remoteAvailable(): boolean {
-		return this.getRemoteModule() !== null;
+		return this.mainRemote() !== null;
 	}
 
 	/**
@@ -313,7 +339,7 @@ export class SidecarWindowManager {
 	 */
 	closeZombiePopouts(): void {
 		if (!this.plugin.settings.closeZombiePopoutsOnReload) return;
-		const remote = this.getRemoteModule() as unknown as RemoteModule | null;
+		const remote = this.mainRemote();
 		if (!remote || typeof remote.BrowserWindow?.getAllWindows !== "function") return;
 		let currentId: number;
 		let windows: RemoteBrowserWindow[];
@@ -351,32 +377,32 @@ export class SidecarWindowManager {
 		}
 	}
 
-	/** Resolve Electron's remote module from the plugin context, or null. Both
-	 *  `@electron/remote` and `electron.remote` are tried; both are deprecated,
-	 *  so this may legitimately return null on newer Electron builds. */
-	private getRemoteModule(): { getCurrentWindow?: unknown } | null {
+	/** Resolve an Electron remote module from a window's `require`, or null. Both
+	 *  `@electron/remote` and `electron.remote` are tried; both are deprecated, so
+	 *  this may legitimately return null on newer Electron builds. */
+	private resolveRemote(req: unknown): RemoteModule | null {
+		if (typeof req !== "function") return null;
+		const r = req as (id: string) => unknown;
 		try {
-			const req = (window as unknown as { require?: (id: string) => unknown })
-				.require;
-			if (typeof req !== "function") return null;
-			try {
-				const m = req("@electron/remote") as { getCurrentWindow?: unknown };
-				if (m && typeof m.getCurrentWindow === "function") return m;
-			} catch {
-				/* not available — fall through */
-			}
-			try {
-				const e = req("electron") as { remote?: { getCurrentWindow?: unknown } };
-				if (e?.remote && typeof e.remote.getCurrentWindow === "function") {
-					return e.remote;
-				}
-			} catch {
-				/* not available */
+			const m = r("@electron/remote") as Partial<RemoteModule>;
+			if (typeof m?.getCurrentWindow === "function") return m as RemoteModule;
+		} catch {
+			/* not available — fall through */
+		}
+		try {
+			const e = r("electron") as { remote?: Partial<RemoteModule> };
+			if (typeof e?.remote?.getCurrentWindow === "function") {
+				return e.remote as RemoteModule;
 			}
 		} catch {
-			/* require not present */
+			/* not available */
 		}
 		return null;
+	}
+
+	/** This (main) renderer's remote module, or null. */
+	private mainRemote(): RemoteModule | null {
+		return this.resolveRemote((window as unknown as { require?: unknown }).require);
 	}
 
 	/**
@@ -389,31 +415,12 @@ export class SidecarWindowManager {
 	 */
 	private setAlwaysOnTop(popoutWin: Window, pinned: boolean): void {
 		try {
-			const req = (popoutWin as unknown as { require?: (id: string) => unknown })
-				.require;
-			if (typeof req !== "function") return;
-			let remote: { getCurrentWindow?: () => RemoteBrowserWindow } | null = null;
-			try {
-				const m = req("@electron/remote") as {
-					getCurrentWindow?: () => RemoteBrowserWindow;
-				};
-				if (m && typeof m.getCurrentWindow === "function") remote = m;
-			} catch {
-				/* not available */
-			}
-			if (!remote) {
-				try {
-					const e = req("electron") as {
-						remote?: { getCurrentWindow?: () => RemoteBrowserWindow };
-					};
-					if (e?.remote && typeof e.remote.getCurrentWindow === "function") {
-						remote = e.remote;
-					}
-				} catch {
-					/* not available */
-				}
-			}
-			remote?.getCurrentWindow?.().setAlwaysOnTop(pinned, "floating");
+			// Resolve through the *popout's* own require so getCurrentWindow()
+			// returns this popout, not the main window.
+			const remote = this.resolveRemote(
+				(popoutWin as unknown as { require?: unknown }).require
+			);
+			remote?.getCurrentWindow().setAlwaysOnTop(pinned, "floating");
 		} catch (e) {
 			console.warn("[Sidecar] setAlwaysOnTop failed:", e);
 		}
@@ -455,81 +462,28 @@ export class SidecarWindowManager {
 		doc.body.dataset.sidecarBuild = SIDECAR_BUILD;
 		doc.body.dataset.sidecarSession = this.sessionToken;
 		this.injectPopoutStyles(doc);
-		this.applyPinStyle(doc);
-		this.applyPopInStyle(doc);
-		this.applyNavStyle(doc);
-		this.applyHomeStyle(doc);
+		this.applyBarButtonStyles(doc);
 	}
 
-	private applyPinStyle(doc: Document): void {
-		const STYLE_ID = "sidecar-pin-style";
-		doc.getElementById(STYLE_ID)?.remove();
-		if (!this.plugin.settings.showPinButton) {
-			const el = doc.createElement("style");
-			el.id = STYLE_ID;
-			el.textContent = `.sidecar-pin-btn { display: none !important; }`;
-			doc.head.appendChild(el);
+	/** (Re)inject the per-button hide `<style>` tags for this popout, per the
+	 *  current settings — one `<style id>` per bar button, from BAR_BUTTON_STYLES. */
+	private applyBarButtonStyles(doc: Document): void {
+		for (const { id, selector, setting } of BAR_BUTTON_STYLES) {
+			doc.getElementById(id)?.remove();
+			if (!this.plugin.settings[setting]) {
+				const el = doc.createElement("style");
+				el.id = id;
+				el.textContent = `${selector} { display: none !important; }`;
+				doc.head.appendChild(el);
+			}
 		}
 	}
 
-	updatePinStyle(): void {
+	/** Re-sync bar-button visibility across all open Sidecars (from settings). */
+	updateBarButtonStyles(): void {
 		for (const leaf of this.leaves) {
 			const doc = this.popoutDocFor(leaf);
-			if (doc) this.applyPinStyle(doc);
-		}
-	}
-
-	private applyPopInStyle(doc: Document): void {
-		const STYLE_ID = "sidecar-popin-style";
-		doc.getElementById(STYLE_ID)?.remove();
-		if (!this.plugin.settings.showPopInButton) {
-			const el = doc.createElement("style");
-			el.id = STYLE_ID;
-			el.textContent = `.sidecar-popin-btn { display: none !important; }`;
-			doc.head.appendChild(el);
-		}
-	}
-
-	updatePopInStyle(): void {
-		for (const leaf of this.leaves) {
-			const doc = this.popoutDocFor(leaf);
-			if (doc) this.applyPopInStyle(doc);
-		}
-	}
-
-	private applyNavStyle(doc: Document): void {
-		const STYLE_ID = "sidecar-nav-style";
-		doc.getElementById(STYLE_ID)?.remove();
-		if (!this.plugin.settings.showNavButtons) {
-			const el = doc.createElement("style");
-			el.id = STYLE_ID;
-			el.textContent = `.sidecar-nav-btn { display: none !important; }`;
-			doc.head.appendChild(el);
-		}
-	}
-
-	updateNavStyle(): void {
-		for (const leaf of this.leaves) {
-			const doc = this.popoutDocFor(leaf);
-			if (doc) this.applyNavStyle(doc);
-		}
-	}
-
-	private applyHomeStyle(doc: Document): void {
-		const STYLE_ID = "sidecar-home-style";
-		doc.getElementById(STYLE_ID)?.remove();
-		if (!this.plugin.settings.showHomeButton) {
-			const el = doc.createElement("style");
-			el.id = STYLE_ID;
-			el.textContent = `.sidecar-home-btn { display: none !important; }`;
-			doc.head.appendChild(el);
-		}
-	}
-
-	updateHomeStyle(): void {
-		for (const leaf of this.leaves) {
-			const doc = this.popoutDocFor(leaf);
-			if (doc) this.applyHomeStyle(doc);
+			if (doc) this.applyBarButtonStyles(doc);
 		}
 	}
 

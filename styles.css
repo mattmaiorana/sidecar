@@ -8,10 +8,12 @@
  * to be scoped per-popout and must not skin the user's own popout windows.
  */
 
-/* Per-button visibility — toggled via body classes from settings. */
-body.sidecar-hide-ribbon-btn .sidecar-ribbon-btn,
-body.sidecar-hide-home-ribbon-btn .sidecar-home-ribbon-btn,
-body.sidecar-hide-toolbar-btn .sidecar-toolbar-btn {
+/* Per-button visibility — toggled via body classes from settings. The button
+ * class is repeated to raise specificity (…-btn.…-btn) so `display: none` wins
+ * over Obsidian's own rules for these elements without needing !important. */
+body.sidecar-hide-ribbon-btn .sidecar-ribbon-btn.sidecar-ribbon-btn,
+body.sidecar-hide-home-ribbon-btn .sidecar-home-ribbon-btn.sidecar-home-ribbon-btn,
+body.sidecar-hide-toolbar-btn .sidecar-toolbar-btn.sidecar-toolbar-btn {
 	display: none;
 }
 

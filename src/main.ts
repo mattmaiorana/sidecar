@@ -132,6 +132,11 @@ export default class SidecarBrowserPlugin extends Plugin {
 			"sidecar-hide-home-ribbon-btn",
 			"sidecar-hide-toolbar-btn"
 		);
+		// Ribbon buttons are auto-removed by Obsidian; the per-note toolbar
+		// actions (view.addAction) are not, so drop them ourselves.
+		activeDocument
+			.querySelectorAll(".sidecar-toolbar-btn")
+			.forEach((el) => el.remove());
 	}
 
 	async openDefaultNote(): Promise<void> {

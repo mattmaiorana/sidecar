@@ -287,7 +287,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showPopInButton = value;
 						await this.plugin.saveSettings();
-						this.plugin.windowManager.updatePopInStyle();
+						this.plugin.windowManager.updateBarButtonStyles();
 					})
 			);
 
@@ -300,7 +300,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showPinButton = value;
 						await this.plugin.saveSettings();
-						this.plugin.windowManager.updatePinStyle();
+						this.plugin.windowManager.updateBarButtonStyles();
 					})
 			);
 
@@ -313,7 +313,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showNavButtons = value;
 						await this.plugin.saveSettings();
-						this.plugin.windowManager.updateNavStyle();
+						this.plugin.windowManager.updateBarButtonStyles();
 					})
 			);
 
@@ -326,7 +326,7 @@ export class SidecarBrowserSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showHomeButton = value;
 						await this.plugin.saveSettings();
-						this.plugin.windowManager.updateHomeStyle();
+						this.plugin.windowManager.updateBarButtonStyles();
 					})
 			);
 	}
