@@ -108,9 +108,13 @@ export default class SidecarBrowserPlugin extends Plugin {
 		this.addSettingTab(new SidecarBrowserSettingTab(this.app, this));
 
 		// Mount the launcher buttons, and re-mount them when Obsidian rebuilds
-		// the sidebar/ribbon chrome they live in.
+		// the sidebar/ribbon chrome they live in. Also untrack + de-skin any
+		// Sidecar leaf that was dragged out of its popout into the main window.
 		this.registerEvent(
-			this.app.workspace.on("layout-change", () => this.launcherButtons.mount())
+			this.app.workspace.on("layout-change", () => {
+				this.launcherButtons.mount();
+				this.windowManager.reconcileMovedLeaves();
+			})
 		);
 
 		this.app.workspace.onLayoutReady(() => {
@@ -127,16 +131,23 @@ export default class SidecarBrowserPlugin extends Plugin {
 		// popout windows open as plain popouts.
 		this.windowManager?.teardown();
 		this.launcherButtons?.remove();
-		activeDocument.body.removeClass(
+		// The body classes and toolbar buttons live in the MAIN window; unload can
+		// fire while a popout is focused, so target the main-window document
+		// explicitly (rootSplit.doc) rather than activeDocument, which may be a
+		// popout — otherwise the main window keeps stale hide-classes/buttons.
+		this.app.workspace.rootSplit.doc.body.removeClass(
 			"sidecar-hide-ribbon-btn",
 			"sidecar-hide-home-ribbon-btn",
 			"sidecar-hide-toolbar-btn"
 		);
 		// Ribbon buttons are auto-removed by Obsidian; the per-note toolbar
-		// actions (view.addAction) are not, so drop them ourselves.
-		activeDocument
-			.querySelectorAll(".sidecar-toolbar-btn")
-			.forEach((el) => el.remove());
+		// actions (view.addAction) are not, so drop them across every window
+		// (a decorated view may have been moved into a popout).
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			leaf.view.containerEl
+				.querySelectorAll(".sidecar-toolbar-btn")
+				.forEach((el) => el.remove());
+		}
 	}
 
 	async openDefaultNote(): Promise<void> {

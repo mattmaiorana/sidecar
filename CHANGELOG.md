@@ -5,6 +5,30 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.8]
+
+### Fixed
+- Zombie-popout cleanup ("Close leftover popouts on reload") is now scoped per
+  vault. Obsidian runs multiple open vaults in one Electron process, so the
+  process-wide window sweep could destroy another vault's *live* Sidecars on
+  reload. The per-session token now carries a stable vault id and the sweep only
+  closes this vault's orphans from a previous session.
+- A Sidecar tab dragged into the main window (or moved via "Move to main
+  window") no longer leaves an unstyled header-button row behind, and the leaf
+  it left is no longer leaked in internal tracking. It's de-skinned and untracked
+  on the next layout change.
+- Plugin teardown (`onunload`) now clears its main-window body classes and
+  toolbar buttons from the main window explicitly, instead of whichever window
+  happened to be focused — so disabling the plugin while a popout is focused no
+  longer leaves stale hidden buttons in the main window.
+- The Home button now shows a Notice when the default note is unset or missing,
+  matching the command, instead of silently doing nothing.
+- Closing a restored popout that held more than one note now untracks all of its
+  leaves, and a failed popout open can no longer leave the "skin the next
+  window" guard stuck on.
+
+---
+
 ## [1.2.7]
 
 ### Changed

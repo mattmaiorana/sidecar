@@ -1,4 +1,4 @@
-import { MarkdownView, TFile, WorkspaceLeaf, WorkspaceWindow, setIcon } from "obsidian";
+import { MarkdownView, Notice, TFile, WorkspaceLeaf, WorkspaceWindow, setIcon } from "obsidian";
 import type SidecarBrowserPlugin from "./main";
 import type { SidecarBrowserSettings } from "./settings";
 
@@ -8,7 +8,7 @@ const POPOUT_BODY_CLASS = "sidecar-popout";
 /** id of the <style> element we inject into each popout's <head>. */
 const STYLE_ID = "sidecar-injected-styles";
 /** Bump to confirm the active build in the popout's own inspector. */
-export const SIDECAR_BUILD = "1.2.7";
+export const SIDECAR_BUILD = "1.2.8";
 
 /** Minimal shapes of the Electron remote APIs we rely on (pin + zombie sweep). */
 interface RemoteBrowserWindow {
@@ -65,9 +65,9 @@ export class SidecarWindowManager {
 	/** Leaves whose window is currently pinned always-on-top (in-memory only;
 	 *  not persisted, so a reload clears pins). */
 	private pinnedLeaves = new Set<WorkspaceLeaf>();
-	/** Unique per plugin load. Stamped on every popout we skin so the zombie
-	 *  sweep can tell this session's windows from orphans left by a prior one. */
-	private readonly sessionToken =
+	/** Random, unique per plugin load — the "which session" half of the popout
+	 *  stamp. Lets the zombie sweep tell this load's windows from a prior one's. */
+	private readonly sessionNonce =
 		Date.now().toString(36) + Math.random().toString(36).slice(2);
 
 	constructor(plugin: SidecarBrowserPlugin) {
@@ -76,6 +76,20 @@ export class SidecarWindowManager {
 
 	private get app() {
 		return this.plugin.app;
+	}
+
+	/** Stable per-vault id. Electron runs multiple open vaults in ONE process, so
+	 *  the zombie sweep's getAllWindows() also sees other vaults' windows; scoping
+	 *  the token by vault ensures we only ever destroy THIS vault's orphans, never
+	 *  another vault's live Sidecars. */
+	private get vaultId(): string {
+		return this.app.vault.getName();
+	}
+
+	/** The token stamped on every popout we skin: `<vaultId>:<sessionNonce>`. Two
+	 *  popouts share it iff they are the same vault AND the same plugin load. */
+	private get sessionToken(): string {
+		return `${this.vaultId}:${this.sessionNonce}`;
 	}
 
 	/**
@@ -88,18 +102,25 @@ export class SidecarWindowManager {
 		const height = this.plugin.settings.windowHeight;
 		const pos = this.computeOpenPosition();
 		this.pendingPopout = true;
-		const leaf = this.app.workspace.openPopoutLeaf({
-			size: { width, height },
-			x: pos.x,
-			y: pos.y,
-		});
+		let leaf: WorkspaceLeaf;
+		try {
+			// handleWindowOpen fires synchronously inside this call and clears the
+			// flag; the finally is a backstop so a throw here can't leave it stuck
+			// true (which would make us skin the next popout the *user* opens).
+			leaf = this.app.workspace.openPopoutLeaf({
+				size: { width, height },
+				x: pos.x,
+				y: pos.y,
+			});
+		} finally {
+			this.pendingPopout = false;
+		}
 		this.leaves.add(leaf);
 
 		await leaf.openFile(file, { active: true });
 		this.decorateHeader(leaf);
 		this.app.workspace.setActiveLeaf(leaf, { focus: true });
 
-		this.pendingPopout = false;
 		this.schedulePopoutSetup(leaf, true);
 	}
 
@@ -143,13 +164,35 @@ export class SidecarWindowManager {
 		this.applyPopoutMarks(win.doc);
 	}
 
-	/** React to a specific popout being closed — removes the leaf from tracking. */
+	/** React to a specific popout being closed — removes every tracked leaf that
+	 *  lived in it. A restored popout adopted via scanAndAdopt can hold more than
+	 *  one markdown leaf, so we must drop them all (no early break). */
 	handleWindowClose(win: WorkspaceWindow): void {
 		for (const leaf of this.leaves) {
 			if (this.workspaceWindowFor(leaf) !== win) continue;
 			this.leaves.delete(leaf);
 			this.pinnedLeaves.delete(leaf);
-			break;
+		}
+	}
+
+	/**
+	 * Drop tracked leaves that are no longer inside a popout window. If the user
+	 * drags a Sidecar tab into the main window (or uses "Move to main window"),
+	 * the view's containerEl — with our prepended `.sidecar-titlebar` — travels
+	 * with it, but the popout CSS stays behind, so the main window would show an
+	 * unstyled header row. The leaf also leaks: its popout is gone, so
+	 * `handleWindowClose` never matches it. Here we strip the bar and stop
+	 * tracking. Wired to `layout-change`. Safe against transient states: an open()
+	 * leaf is already in its WorkspaceWindow synchronously before layout-change.
+	 */
+	reconcileMovedLeaves(): void {
+		for (const leaf of this.leaves) {
+			if (leaf.getContainer() instanceof WorkspaceWindow) continue;
+			leaf.view?.containerEl
+				?.querySelector(":scope > .sidecar-titlebar")
+				?.remove();
+			this.leaves.delete(leaf);
+			this.pinnedLeaves.delete(leaf);
 		}
 	}
 
@@ -330,17 +373,21 @@ export class SidecarWindowManager {
 	 * an Obsidian-level bug; it happens with the plugin disabled too.
 	 *
 	 * Every popout we skin stamps `body.dataset.sidecarSession` with this load's
-	 * token (see `applyPopoutMarks`). Here we read that token off every Electron
-	 * window: any window carrying a Sidecar token that ISN'T the current one is an
-	 * orphan from before the reload, so we destroy it. Windows with the current
-	 * token (this session's live popouts) and windows with no token (the user's
-	 * own popouts) are never touched — so the result is timing-independent. Gated
-	 * by the setting and by the remote module being reachable.
+	 * `<vaultId>:<nonce>` token (see `applyPopoutMarks`). Here we read that token
+	 * off every Electron window and destroy only windows whose token is for THIS
+	 * vault but a PRIOR session (same `vaultId:` prefix, different full token) —
+	 * i.e. an orphan from before the reload. Windows with the current token (this
+	 * session's live popouts), windows from another vault (Electron shares one
+	 * process across vaults), and windows with no token (the user's own popouts)
+	 * are all left untouched — so the result is timing- and vault-independent.
+	 * Gated by the setting and by the remote module being reachable.
 	 */
 	closeZombiePopouts(): void {
 		if (!this.plugin.settings.closeZombiePopoutsOnReload) return;
 		const remote = this.mainRemote();
 		if (!remote || typeof remote.BrowserWindow?.getAllWindows !== "function") return;
+		const currentToken = this.sessionToken;
+		const vaultPrefix = this.vaultId + ":";
 		let currentId: number;
 		let windows: RemoteBrowserWindow[];
 		try {
@@ -360,7 +407,14 @@ export class SidecarWindowManager {
 					"(document.body && document.body.dataset.sidecarSession) || ''"
 				)
 				.then((token) => {
-					if (typeof token === "string" && token && token !== this.sessionToken) {
+					// Only OUR vault's popouts from a PRIOR session: same vault
+					// prefix, different full token. Skips this session's live
+					// windows, other vaults' windows, and untagged user popouts.
+					if (
+						typeof token === "string" &&
+						token.startsWith(vaultPrefix) &&
+						token !== currentToken
+					) {
 						try {
 							win.destroy();
 							console.info(
@@ -489,9 +543,15 @@ export class SidecarWindowManager {
 
 	private async goHome(leaf: WorkspaceLeaf): Promise<void> {
 		const path = this.plugin.settings.defaultNote.trim();
-		if (!path) return;
+		if (!path) {
+			new Notice("No default note configured — set one in Sidecar settings.");
+			return;
+		}
 		const abstract = this.plugin.app.vault.getAbstractFileByPath(path);
-		if (!(abstract instanceof TFile)) return;
+		if (!(abstract instanceof TFile)) {
+			new Notice(`Default note not found: ${path}`);
+			return;
+		}
 		await leaf.openFile(abstract);
 	}
 
